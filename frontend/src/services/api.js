@@ -7,7 +7,7 @@ const apiClient = axios.create({
     }
 });
 
-// INTERCEPTOR: Tự động đính kèm Token vào request nếu có
+// INTERCEPTOR: Tự động đính kèm Token
 apiClient.interceptors.request.use((config) => {
     const token = localStorage.getItem('token');
     if (token) {
@@ -40,7 +40,8 @@ export const createCategory = (data) => apiClient.post('/categories', data);
 export const updateHero = (id, data) => apiClient.put(`/heroes/${id}`, data);
 export const deleteHero = (id) => apiClient.delete(`/heroes/${id}`);
 
-// --- ITEMS CRUD ---
+// --- ITEMS CRUD (Đã bổ sung createItem) ---
+export const createItem = (data) => apiClient.post('/items', data);
 export const updateItem = (id, data) => apiClient.put(`/items/${id}`, data);
 export const deleteItem = (id) => apiClient.delete(`/items/${id}`);
 

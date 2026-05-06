@@ -1,6 +1,5 @@
 const Item = require('../models/Item');
 
-// [POST] Thêm trang bị mới vào hệ thống
 const createItem = async (req, res) => {
     try {
         const newItem = new Item(req.body);
@@ -11,7 +10,6 @@ const createItem = async (req, res) => {
     }
 };
 
-// [GET] Lấy danh sách tất cả trang bị (để Frontend làm menu chọn)
 const getAllItems = async (req, res) => {
     try {
         const items = await Item.find().sort({ name: 1 }); // Sắp xếp theo thứ tự chữ cái A-Z
@@ -21,4 +19,18 @@ const getAllItems = async (req, res) => {
     }
 };
 
-module.exports = { createItem, getAllItems };
+const updateItem = async (req, res) => {
+    try {
+        const updatedItem = await Item.findByIdAndUpdate(req.params.id, req.body, { new: true });
+        res.status(200).json(updatedItem);
+    } catch (error) { res.status(500).json({ message: error.message }); }
+};
+
+const deleteItem = async (req, res) => {
+    try {
+        await Item.findByIdAndDelete(req.params.id);
+        res.status(200).json({ message: "Đã xóa Trang bị" });
+    } catch (error) { res.status(500).json({ message: error.message }); }
+};
+
+module.exports = { createItem, getAllItems, updateItem, deleteItem };

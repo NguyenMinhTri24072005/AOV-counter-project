@@ -11,9 +11,11 @@ CẤU TRÚC THƯ MỤC DỰ ÁN
 │       ├── config/
 │       ├── controllers/
 │       │   ├── authController.js
+│       │   ├── categoryController.js
 │       │   ├── heroController.js
 │       │   ├── itemController.js
-│       │   └── matchupController.js
+│       │   ├── matchupController.js
+│       │   └── roleController.js
 │       ├── middleware/
 │       │   └── auth.js
 │       ├── models/
@@ -25,10 +27,13 @@ CẤU TRÚC THƯ MỤC DỰ ÁN
 │       │   └── User.js
 │       ├── routes/
 │       │   ├── authRoutes.js
+│       │   ├── categoryRoutes.js
 │       │   ├── herroRoutes.js
 │       │   ├── itemRoutes.js
-│       │   └── matchupRoutes.js
+│       │   ├── matchupRoutes.js
+│       │   └── roleRoutes.js
 │       └── server.js
+├── COMBINE_FOR_AI_Project.txt
 ├── COMBINE_FOR_AI_Project_V2.txt
 ├── frontend/
 │   ├── .gitignore
@@ -61,6 +66,7 @@ CẤU TRÚC THƯ MỤC DỰ ÁN
 │   │   │   │   ├── AdminDashboard.jsx
 │   │   │   │   ├── ManageHeroes.jsx
 │   │   │   │   ├── ManageItems.jsx
+│   │   │   │   ├── ManageMatchups.jsx
 │   │   │   │   └── ManageMetadata.jsx
 │   │   │   ├── Auth.css
 │   │   │   ├── Login.jsx
@@ -391,6 +397,24 @@ module.exports = { register, login };
 --- KẾT THÚC FILE: backend/src/controllers/authController.js ---
 
 
+--- BẮT ĐẦU FILE: backend/src/controllers/categoryController.js ---
+
+const ItemCategory = require('../models/ItemCategory');
+
+const getCategories = async (req, res) => {
+    try {
+        const categories = await ItemCategory.find();
+        res.status(200).json(categories);
+    } catch (error) {
+        res.status(500).json({ message: 'Lỗi khi lấy Category: ' + error.message });
+    }
+};
+
+module.exports = { getCategories };
+
+--- KẾT THÚC FILE: backend/src/controllers/categoryController.js ---
+
+
 --- BẮT ĐẦU FILE: backend/src/controllers/heroController.js ---
 
 const Hero = require('../models/Heros')
@@ -518,6 +542,25 @@ const getRecommendations = async (req, res) => {
 module.exports = {createMatchup, getRecommendations };
 
 --- KẾT THÚC FILE: backend/src/controllers/matchupController.js ---
+
+
+--- BẮT ĐẦU FILE: backend/src/controllers/roleController.js ---
+
+const Role = require('../models/Role');
+
+const getRoles = async (req, res) => {
+    try {
+        const roles = await Role.find();
+        res.status(200).json(roles);
+    } catch (error) {
+        res.status(500).json({ message: 'Lỗi khi lấy Role: ' + error.message });
+    }
+};
+
+module.exports = { getRoles };
+
+
+--- KẾT THÚC FILE: backend/src/controllers/roleController.js ---
 
 
 --- BẮT ĐẦU FILE: backend/src/middleware/auth.js ---
@@ -670,6 +713,19 @@ module.exports = router;
 --- KẾT THÚC FILE: backend/src/routes/authRoutes.js ---
 
 
+--- BẮT ĐẦU FILE: backend/src/routes/categoryRoutes.js ---
+
+const express = require('express');
+const router = express.Router();
+const categoryController = require('../controllers/categoryController');
+
+router.get('/', categoryController.getCategories);
+
+module.exports = router;
+
+--- KẾT THÚC FILE: backend/src/routes/categoryRoutes.js ---
+
+
 --- BẮT ĐẦU FILE: backend/src/routes/herroRoutes.js ---
 
 const express = require('express')
@@ -712,6 +768,19 @@ module.exports = router;
 --- KẾT THÚC FILE: backend/src/routes/matchupRoutes.js ---
 
 
+--- BẮT ĐẦU FILE: backend/src/routes/roleRoutes.js ---
+
+const express = require('express');
+const router = express.Router();
+const roleController = require('../controllers/roleController');
+
+router.get('/', roleController.getRoles);
+
+module.exports = router;
+
+--- KẾT THÚC FILE: backend/src/routes/roleRoutes.js ---
+
+
 --- BẮT ĐẦU FILE: backend/src/server.js ---
 
 require('dotenv').config();
@@ -723,6 +792,8 @@ const heroRoutes = require('./routes/herroRoutes');
 const matchupRoutes = require('./routes/matchupRoutes');
 const itemRoutes = require('./routes/itemRoutes');
 const authRoutes = require('./routes/authRoutes');
+const roleRoutes = require('./routes/roleRoutes');
+const categoryRoutes = require('./routes/categoryRoutes');
 
 const app = express();
 
@@ -742,6 +813,8 @@ app.use('/api/heroes', heroRoutes);
 app.use('/api/matchups', matchupRoutes);
 app.use('/api/items', itemRoutes);
 app.use('/api/auth', authRoutes);
+app.use('/api/roles', roleRoutes);
+app.use('/api/categories', categoryRoutes);
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
@@ -1651,7 +1724,7 @@ const apiClient = axios.create({
     }
 });
 
-// INTERCEPTOR: Tự động đính kèm Token vào request nếu có
+// INTERCEPTOR: Tự động đính kèm Token
 apiClient.interceptors.request.use((config) => {
     const token = localStorage.getItem('token');
     if (token) {
@@ -1684,7 +1757,8 @@ export const createCategory = (data) => apiClient.post('/categories', data);
 export const updateHero = (id, data) => apiClient.put(`/heroes/${id}`, data);
 export const deleteHero = (id) => apiClient.delete(`/heroes/${id}`);
 
-// --- ITEMS CRUD ---
+// --- ITEMS CRUD (Đã bổ sung createItem) ---
+export const createItem = (data) => apiClient.post('/items', data);
 export const updateItem = (id, data) => apiClient.put(`/items/${id}`, data);
 export const deleteItem = (id) => apiClient.delete(`/items/${id}`);
 
