@@ -13,48 +13,51 @@ const createMatchup = async (req,res) => {
 
 const getRecommendations = async (req, res) => {
     try {
-        const { enemyHeroIds } = req.body;
+        // NHẬN THÊM excludedIds TỪ FRONTEND
+        const { enemyIds, excludedIds = [] } = req.body; 
 
-        const matchups = await Matchup.find({enemyHeroId: { $in: enemyHeroIds}})
-            .populate('counterHeroId', 'name avatar role lane')
-            .populate('counterItems', 'name avatar passive')
+        const matchups = await Matchup.find({ enemyHeroId: { $in: enemyIds } })
+            .populate('counterHeroId', 'name avatar role')
+            .populate('counterItems', 'name avatar passive');
 
         const counterMap = {};
 
-        matchups.forEach(matchup => {
+        matchups.forEach(match => {
             const counterId = match.counterHeroId._id.toString();
+
+            if (excludedIds.includes(counterId)) {
+                return; 
+            }
 
             if (!counterMap[counterId]) {
                 counterMap[counterId] = {
-                    hero: matchup.counterHeroId,
+                    hero: match.counterHeroId,
                     totalScore: 0,
                     recommendedItems: new Set(),
                     matchupDetails: []
-                }
+                };
             }
 
-            counterMap[counterId].totalScore += matchup.score;
-
-            matchup.counterItems.forEach(item => counterMap[counterId].recommendedItems.add(item));
-
+            counterMap[counterId].totalScore += match.score;
+            match.counterItems.forEach(item => counterMap[counterId].recommendedItems.add(item));
             counterMap[counterId].matchupDetails.push({
-                enemyId: matchup.enemyHeroId,
-                score: matchup.score,
-                note: matchup.note
-            })
-        })
+                enemyId: match.enemyHeroId,
+                score: match.score,
+                note: match.note
+            });
+        });
 
         const sortedCounters = Object.values(counterMap)
-            .map(c => ({
-                ...c,
+            .map(c => ({ 
+                ...c, 
                 recommendedItems: Array.from(c.recommendedItems)
             }))
-            .sort((a, b) => b.totalScore - a.totalScore)
-        
-            res.status(200).json(sortedCounters)
+            .sort((a, b) => b.totalScore - a.totalScore);
+
+        res.status(200).json(sortedCounters);
     } catch (error) {
-        res.status(500).json({message: "lỗi xử lý kèo đấu: " + error.message})
+        res.status(500).json({ message: 'Lỗi xử lý kèo đấu: ' + error.message });
     }
-}
+};
 
 module.exports = {createMatchup, getRecommendations };

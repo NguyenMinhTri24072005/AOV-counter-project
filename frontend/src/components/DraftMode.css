@@ -1,0 +1,276 @@
+.draft-mode-container {
+    margin-top: 10px;
+}
+
+/* Thanh công cụ */
+.action-bar {
+    display: flex;
+    gap: 15px;
+    align-items: center;
+    background-color: #f8f9fa;
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 25px;
+    flex-wrap: wrap;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.draft-select {
+    padding: 10px;
+    min-width: 250px;
+    border-radius: 4px;
+    border: 1px solid #ced4da;
+    font-size: 15px;
+}
+
+.action-buttons {
+    display: flex;
+    gap: 10px;
+}
+
+.action-buttons button {
+    padding: 10px 15px;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: opacity 0.2s;
+}
+
+.action-buttons button:disabled {
+    background-color: #adb5bd !important;
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+.btn-ban-enemy { background-color: #5a3c42; }
+.btn-pick-enemy { background-color: #dc3545; }
+.btn-pick-ally { background-color: #0d6efd; }
+.btn-ban-ally { background-color: #3b4e6b; }
+
+
+/* BÀN CỜ DRAFT (2 CỘT) */
+.draft-board-split {
+    display: flex;
+    gap: 30px;
+    margin-bottom: 30px;
+}
+
+@media (max-width: 768px) {
+    .draft-board-split { flex-direction: column; }
+}
+
+.team-col {
+    flex: 1;
+    background-color: #ffffff;
+    border: 1px solid #e9ecef;
+    border-radius: 10px;
+    padding: 20px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.02);
+}
+
+.enemy-col { border-top: 5px solid #dc3545; }
+.ally-col { border-top: 5px solid #0d6efd; }
+
+.col-title {
+    text-align: center;
+    margin-top: 0;
+    font-weight: 800;
+}
+.enemy-title { color: #dc3545; }
+.ally-title { color: #0d6efd; }
+
+.bans-row, .picks-row {
+    margin-bottom: 20px;
+}
+
+.bans-row h4, .picks-row h4 {
+    margin: 0 0 10px 0;
+    color: #495057;
+    font-size: 14px;
+    text-transform: uppercase;
+}
+
+.slots-container {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+/* THIẾT KẾ SLOT BOX */
+.slot-box {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.slot-box.empty {
+    background-color: #f1f3f5;
+    border: 2px dashed #ced4da;
+    color: #adb5bd;
+}
+
+.slot-box.filled {
+    background-color: #e9ecef;
+    color: #212529;
+    border: 2px solid transparent;
+}
+
+/* Kích thước */
+.slot-box.ban { width: 80px; height: 35px; font-size: 12px; }
+.slot-box.pick { width: 110px; height: 50px; }
+
+/* Màu nền phân biệt Địch / Ta khi Filled */
+.enemy-col .slot-box.filled { background-color: #fdf2f3; border-color: #f5c2c7; }
+.ally-col .slot-box.filled { background-color: #f0f7ff; border-color: #cfe2ff; }
+.bans .slot-box.filled { background-color: #e9ecef; border-color: #6c757d; opacity: 0.8; text-decoration: line-through; }
+
+/* HIỆU ỨNG VIỀN BORDER MÀU XANH / ĐỎ CHÉO */
+.slot-box.border-green {
+    border: 3px solid #28a745 !important;
+    box-shadow: 0 0 12px rgba(40, 167, 69, 0.6);
+    background-color: #e6f6ea !important;
+}
+
+.slot-box.border-red {
+    border: 3px solid #dc3545 !important;
+    box-shadow: 0 0 12px rgba(220, 53, 69, 0.6);
+    background-color: #fdf2f3 !important;
+}
+
+/* Nút xóa trong Slot */
+.remove-btn {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background-color: #6c757d;
+    color: white;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    line-height: 1;
+}
+.remove-btn:hover { background-color: #343a40; }
+
+
+/* KHU VỰC PHÂN TÍCH BÊN DƯỚI */
+.analysis-board {
+    background-color: #fcfcfc;
+    padding: 25px;
+    border-radius: 10px;
+    border: 1px solid #e9ecef;
+}
+
+.recommendation-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 20px;
+    margin-top: 20px;
+}
+
+.rec-card {
+    background: white;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.04);
+}
+
+.rec-header {
+    background-color: #f8f9fa;
+    padding: 12px 15px;
+    border-bottom: 1px solid #eee;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.score-badge {
+    background-color: #ffc107;
+    color: #000;
+    font-size: 12px;
+    font-weight: bold;
+    padding: 4px 8px;
+    border-radius: 12px;
+}
+
+.rec-body {
+    padding: 15px;
+}
+
+.rec-detail-title {
+    margin: 0 0 10px 0;
+    font-size: 13px;
+    color: #6c757d;
+}
+
+.rec-details-list {
+    margin: 0;
+    padding-left: 20px;
+    font-size: 14px;
+}
+
+.rec-details-list li { margin-bottom: 8px; }
+.rec-note {
+    font-style: italic;
+    color: #888;
+    font-size: 12.5px;
+    margin-top: 2px;
+}
+
+/* Container bao bọc cả 2 bảng phân tích */
+.analysis-container {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+/* Base style cho các bảng */
+.analysis-board {
+    background-color: #fcfcfc;
+    padding: 25px;
+    border-radius: 10px;
+    border: 1px solid #e9ecef;
+}
+
+/* Bảng Đề Xuất (Màu vàng/xanh) */
+.board-recommend {
+    border-left: 4px solid #ffc107;
+}
+
+/* Bảng Cảnh Báo (Màu đỏ) */
+.board-threat {
+    border-left: 4px solid #dc3545;
+    background-color: #fffafb;
+}
+
+.board-threat h2 {
+    color: #dc3545;
+}
+
+/* Style riêng cho Thẻ Cảnh báo */
+.threat-header {
+    background-color: #fdf2f3 !important;
+    border-bottom: 1px solid #f5c2c7 !important;
+}
+
+.threat-badge {
+    background-color: #dc3545 !important;
+    color: white !important;
+}
+
+.threat-card .rec-note {
+    color: #a84650;
+}

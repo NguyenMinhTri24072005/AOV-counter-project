@@ -4,14 +4,25 @@ CẤU TRÚC THƯ MỤC DỰ ÁN
 
 ├── .gitignore
 ├── backend/
+│   ├── .env
 │   ├── package.json
+│   ├── seeder.js
 │   └── src/
-│       ├── .env
 │       ├── config/
 │       ├── controllers/
+│       │   ├── heroController.js
+│       │   ├── itemController.js
+│       │   └── matchupController.js
 │       ├── models/
+│       │   ├── Heros.js
+│       │   ├── Item.js
+│       │   └── Matchup.js
 │       ├── routes/
+│       │   ├── herroRoutes.js
+│       │   ├── itemRoutes.js
+│       │   └── matchupRoutes.js
 │       └── server.js
+├── COMBINE_FOR_AI_Project.txt
 ├── frontend/
 │   ├── .gitignore
 │   ├── eslint.config.js
@@ -26,10 +37,17 @@ CẤU TRÚC THƯ MỤC DỰ ÁN
 │   │   │   ├── react.svg
 │   │   │   └── vite.svg
 │   │   ├── components/
+│   │   │   ├── DraftMode.css
+│   │   │   ├── DraftMode.jsx
+│   │   │   ├── HeroSelect.css
+│   │   │   ├── HeroSelect.jsx
+│   │   │   ├── SoloCounter.css
+│   │   │   └── SoloCounter.jsx
 │   │   ├── index.css
 │   │   ├── main.jsx
 │   │   ├── pages/
 │   │   └── services/
+│   │       └── api.js
 │   └── vite.config.js
 └── README.md
 
@@ -37,6 +55,14 @@ CẤU TRÚC THƯ MỤC DỰ ÁN
 ========================================
 CHI TIẾT MÃ NGUỒN CÁC FILE
 ========================================
+
+
+--- BẮT ĐẦU FILE: backend/.env ---
+
+MONGODB_URI=mongodb://localhost:27017/aov-counter-project
+PORT=5000
+
+--- KẾT THÚC FILE: backend/.env ---
 
 
 --- BẮT ĐẦU FILE: backend/package.json ---
@@ -70,16 +96,385 @@ CHI TIẾT MÃ NGUỒN CÁC FILE
 --- KẾT THÚC FILE: backend/package.json ---
 
 
---- BẮT ĐẦU FILE: backend/src/.env ---
+--- BẮT ĐẦU FILE: backend/seeder.js ---
+
+require('dotenv').config();
+const mongoose = require('mongoose');
+
+// Chú ý: Đảm bảo đường dẫn này khớp với tên file model của bạn trong thư mục src/models/
+const Hero = require('./src/models/Heros'); 
+const Item = require('./src/models/Item');
+const Matchup = require('./src/models/Matchup');
+
+const seedDatabase = async () => {
+    try {
+        // Kết nối Database
+        await mongoose.connect(process.env.MONGODB_URI);
+        console.log('✅ Đã kết nối Database thành công!');
+
+        // 1. XÓA DỮ LIỆU CŨ (Để tránh bị nhân đôi dữ liệu khi chạy script nhiều lần)
+        await Hero.deleteMany();
+        await Item.deleteMany();
+        await Matchup.deleteMany();
+        console.log('🗑️ Đã dọn dẹp dữ liệu cũ!');
+
+        // 2. TẠO DỮ LIỆU TRANG BỊ
+        const itemsData = [
+            { name: 'Đao Truy Hồn', type: 'Công vật lý', price: 2000, passive: 'Giảm 40% khả năng hồi máu của mục tiêu.' },
+            { name: 'Sách Truy Hồn', type: 'Phép thuật', price: 2000, passive: 'Giảm 40% khả năng hồi máu của mục tiêu.' },
+            { name: 'Rìu Hyoga', type: 'Phòng thủ', price: 1900, passive: 'Đòn đánh thường làm chậm tốc chạy kẻ địch.' },
+            { name: 'Khiên Thất Truyền', type: 'Phòng thủ', price: 2100, passive: 'Giảm tốc đánh của kẻ địch lân cận.' }
+        ];
+        const createdItems = await Item.insertMany(itemsData);
+        console.log('⚔️ Đã tạo xong Trang bị!');
+
+        // 3. TẠO DỮ LIỆU TƯỚNG
+        const heroesData = [
+            { name: 'Florentino', role: 'Đấu sĩ', lane: ['Top'], tags: ['Sát thương chuẩn', 'Kỹ năng cao'] },
+            { name: 'Omen', role: 'Đấu sĩ', lane: ['Top'], tags: ['Khống chế cứng', 'Chống chịu'] },
+            { name: 'Taara', role: 'Đỡ đòn', lane: ['Top', 'Jungle'], tags: ['Hồi máu khủng'] },
+            { name: 'Hayate', role: 'Xạ thủ', lane: ['ADC'], tags: ['Cơ động', 'Sát thương chuẩn'] },
+            { name: 'Zuka', role: 'Sát thủ', lane: ['Top', 'Jungle'], tags: ['Sốc sát thương', 'Cơ động'] },
+            { name: 'Arum', role: 'Trợ thủ', lane: ['Support'], tags: ['Khống chế áp chế', 'Hồi máu'] }
+        ];
+        const createdHeroes = await Hero.insertMany(heroesData);
+        console.log('🦸 Đã tạo xong Tướng!');
+
+        // --- Hàm Helper để tìm nhanh ID của Tướng/Trang bị từ tên ---
+        const getHeroId = (name) => createdHeroes.find(h => h.name === name)._id;
+        const getItemId = (name) => createdItems.find(i => i.name === name)._id;
+
+        // 4. TẠO DỮ LIỆU KÈO KHẮC CHẾ
+        const matchupsData = [
+            {
+                enemyHeroId: getHeroId('Florentino'),
+                counterHeroId: getHeroId('Omen'),
+                score: 4,
+                counterItems: [getItemId('Khiên Thất Truyền')],
+                note: 'Omen dùng chiêu cuối xích Florentino lại, làm mất độ cơ động múa hoa.'
+            },
+            {
+                enemyHeroId: getHeroId('Taara'),
+                counterHeroId: getHeroId('Omen'),
+                score: 5,
+                counterItems: [getItemId('Đao Truy Hồn')],
+                note: 'Taara hồi máu rất nhiều, Omen cần lên Đao Truy Hồn để giảm hồi máu và dùng xích để bắt chết.'
+            },
+            {
+                enemyHeroId: getHeroId('Taara'),
+                counterHeroId: getHeroId('Florentino'),
+                score: 4,
+                counterItems: [getItemId('Đao Truy Hồn')],
+                note: 'Sát thương chuẩn của Flo múa lủng lớp giáp của Taara một cách dễ dàng.'
+            },
+            {
+                enemyHeroId: getHeroId('Omen'),
+                counterHeroId: getHeroId('Hayate'),
+                score: 5,
+                counterItems: [getItemId('Rìu Hyoga')],
+                note: 'Hayate có thể thả diều Omen đến chết nhờ độ cơ động, Rìu Hyoga giúp làm chậm khiến Omen không thể tiếp cận.'
+            },
+            {
+                enemyHeroId: getHeroId('Florentino'),
+                counterHeroId: getHeroId('Arum'),
+                score: 5,
+                counterItems: [],
+                note: 'Cứ lao vào múa là Arum dùng Thú Côn (Chiêu cuối) áp chế không cho nhúc nhích.'
+            }
+        ];
+        await Matchup.insertMany(matchupsData);
+        console.log('🔥 Đã tạo xong Kèo Khắc Chế!');
+
+        console.log('🎉 TOÀN BỘ DỮ LIỆU ĐÃ ĐƯỢC BƠM THÀNH CÔNG!');
+        process.exit(0); // Tắt script an toàn
+    } catch (error) {
+        console.error('❌ Có lỗi xảy ra trong quá trình seed dữ liệu:', error);
+        process.exit(1); // Tắt script và báo lỗi
+    }
+};
+
+// Chạy hàm
+seedDatabase();
+
+--- KẾT THÚC FILE: backend/seeder.js ---
 
 
+--- BẮT ĐẦU FILE: backend/src/controllers/heroController.js ---
 
---- KẾT THÚC FILE: backend/src/.env ---
+const Hero = require('../models/Heros')
+
+const createHero = async (req, res) => {
+    try {
+        const newHero = new Hero(req.body);
+        const savedHero = await newHero.save();
+        res.status(201).json(savedHero)
+    } catch (error) {
+        res.status(500).json({
+            message: "lỗi khi thêm tướng: " + error.messase
+        })
+    }
+}
+
+const getAllHeroes = async (req, res) => {
+    try {
+        const heroes = await Hero.find().sort({ name: 1 }); // Sắp xếp theo tên A-Z
+        res.status(200).json(heroes);
+    } catch (error) {
+        res.status(500).json({ message: 'Lỗi khi lấy danh sách tướng: ' + error.message });
+    }
+};
+
+module.exports = { createHero, getAllHeroes };
+
+--- KẾT THÚC FILE: backend/src/controllers/heroController.js ---
+
+
+--- BẮT ĐẦU FILE: backend/src/controllers/itemController.js ---
+
+const Item = require('../models/Item');
+
+// [POST] Thêm trang bị mới vào hệ thống
+const createItem = async (req, res) => {
+    try {
+        const newItem = new Item(req.body);
+        const savedItem = await newItem.save();
+        res.status(201).json(savedItem);
+    } catch (error) {
+        res.status(500).json({ message: 'Lỗi khi thêm trang bị: ' + error.message });
+    }
+};
+
+// [GET] Lấy danh sách tất cả trang bị (để Frontend làm menu chọn)
+const getAllItems = async (req, res) => {
+    try {
+        const items = await Item.find().sort({ name: 1 }); // Sắp xếp theo thứ tự chữ cái A-Z
+        res.status(200).json(items);
+    } catch (error) {
+        res.status(500).json({ message: 'Lỗi khi lấy danh sách trang bị: ' + error.message });
+    }
+};
+
+module.exports = { createItem, getAllItems };
+
+--- KẾT THÚC FILE: backend/src/controllers/itemController.js ---
+
+
+--- BẮT ĐẦU FILE: backend/src/controllers/matchupController.js ---
+
+const Matchup = require('../models/Matchup')
+
+const createMatchup = async (req,res) => {
+    try {
+        const newMatchup = new Matchup(req.body);
+        const savedMatchup = await newMatchup.save();
+        res.status(201).json(savedMatchup)
+    } catch (errror){
+        res.status(500).json({message: 'lỗi khi tạo kèo đấu: ' + error.message})
+    }
+}
+
+
+const getRecommendations = async (req, res) => {
+    try {
+        // NHẬN THÊM excludedIds TỪ FRONTEND
+        const { enemyIds, excludedIds = [] } = req.body; 
+
+        const matchups = await Matchup.find({ enemyHeroId: { $in: enemyIds } })
+            .populate('counterHeroId', 'name avatar role')
+            .populate('counterItems', 'name avatar passive');
+
+        const counterMap = {};
+
+        matchups.forEach(match => {
+            const counterId = match.counterHeroId._id.toString();
+
+            if (excludedIds.includes(counterId)) {
+                return; 
+            }
+
+            if (!counterMap[counterId]) {
+                counterMap[counterId] = {
+                    hero: match.counterHeroId,
+                    totalScore: 0,
+                    recommendedItems: new Set(),
+                    matchupDetails: []
+                };
+            }
+
+            counterMap[counterId].totalScore += match.score;
+            match.counterItems.forEach(item => counterMap[counterId].recommendedItems.add(item));
+            counterMap[counterId].matchupDetails.push({
+                enemyId: match.enemyHeroId,
+                score: match.score,
+                note: match.note
+            });
+        });
+
+        const sortedCounters = Object.values(counterMap)
+            .map(c => ({ 
+                ...c, 
+                recommendedItems: Array.from(c.recommendedItems)
+            }))
+            .sort((a, b) => b.totalScore - a.totalScore);
+
+        res.status(200).json(sortedCounters);
+    } catch (error) {
+        res.status(500).json({ message: 'Lỗi xử lý kèo đấu: ' + error.message });
+    }
+};
+
+module.exports = {createMatchup, getRecommendations };
+
+--- KẾT THÚC FILE: backend/src/controllers/matchupController.js ---
+
+
+--- BẮT ĐẦU FILE: backend/src/models/Heros.js ---
+
+const mongoose = require('mongoose');
+
+const heroSchema = new mongoose.Schema({
+    name: { type: String, required: true }, // unique: true giúp chống nhập trùng tên tướng
+    role: { type: String, required: true },
+    lane: [{ type: String, required: true }],
+    avatar: { type: String },
+    tags: [{ type: String }]
+}, { timestamps: true }); // Tự động thêm createdAt và updatedAt
+
+module.exports = mongoose.model("Hero", heroSchema);
+
+--- KẾT THÚC FILE: backend/src/models/Heros.js ---
+
+
+--- BẮT ĐẦU FILE: backend/src/models/Item.js ---
+
+const mongoose = require('mongoose')
+
+const itemSchema = new mongoose.Schema({
+    name: {type: String, required: true, unique: true},
+    type: {type: String},
+    price: {type: Number},
+    avatar: {type: String},
+    passive: {type: String}
+}, {timestamps: true})
+
+module.exports = mongoose.model('Item', itemSchema)
+
+--- KẾT THÚC FILE: backend/src/models/Item.js ---
+
+
+--- BẮT ĐẦU FILE: backend/src/models/Matchup.js ---
+
+const mongoose = require('mongoose')
+
+const matchupSchema = new mongoose.Schema({
+    counterHeroId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Hero',
+        required: true
+    },
+    enemyHeroId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Hero',
+        required: true
+    },
+    score: {
+        type: Number,
+        required: true,
+        min: 1,
+        max: 5
+    },
+    note: {
+        type: String
+    },
+    counterItems: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Item'
+    }]
+}, {timestamps: true})
+
+matchupSchema.index({enemyHeroId: 1})
+matchupSchema.index({counterHeroId: 1})
+
+module.exports = mongoose.model('Matchup', matchupSchema);
+
+--- KẾT THÚC FILE: backend/src/models/Matchup.js ---
+
+
+--- BẮT ĐẦU FILE: backend/src/routes/herroRoutes.js ---
+
+const express = require('express')
+const router = express.Router();
+const heroController = require('../controllers/heroController');
+
+router.post('/', heroController.createHero)
+router.get('/', heroController.getAllHeroes)
+
+module.exports = router;
+
+--- KẾT THÚC FILE: backend/src/routes/herroRoutes.js ---
+
+
+--- BẮT ĐẦU FILE: backend/src/routes/itemRoutes.js ---
+
+const express = require('express');
+const router = express.Router();
+const itemController = require('../controllers/itemController');
+
+router.post('/', itemController.createItem);    
+router.get('/', itemController.getAllItems);   
+
+module.exports = router;
+
+--- KẾT THÚC FILE: backend/src/routes/itemRoutes.js ---
+
+
+--- BẮT ĐẦU FILE: backend/src/routes/matchupRoutes.js ---
+
+const express = require('express')
+const router = express.Router();
+const matchupController = require('../controllers/matchupController')
+
+router.post('/', matchupController.createMatchup);
+router.post('/recommed', matchupController.getRecommendations)
+
+module.exports = router;
+
+--- KẾT THÚC FILE: backend/src/routes/matchupRoutes.js ---
 
 
 --- BẮT ĐẦU FILE: backend/src/server.js ---
 
+require('dotenv').config();
+const express = require('express');
+const mongoose = require('mongoose');
+const cors = require('cors');
 
+const heroRoutes = require('./routes/herroRoutes');
+const matchupRoutes = require('./routes/matchupRoutes');
+const itemRoutes = require('./routes/itemRoutes');
+
+const app = express();
+
+app.use(cors());
+app.use(express.json());
+
+const URI = process.env.MONGODB_URI;
+mongoose.connect(URI)
+    .then(() => console.log("Đã kết nối thành công với MongoDB"))
+    .catch((err) => console.log("Lỗi kết nối với MongoDB: ", err));
+
+app.get('/', (req, res) => {
+    res.send('API Liên Quân Counter đang hoạt động!');
+});
+
+app.use('/api/heroes', heroRoutes);
+app.use('/api/matchups', matchupRoutes);
+app.use('/api/items', itemRoutes);
+
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => {
+    console.log(`Server đang chạy tại http://localhost:${PORT}`);
+});
 
 --- KẾT THÚC FILE: backend/src/server.js ---
 
@@ -170,311 +565,373 @@ export default defineConfig([
 
 --- BẮT ĐẦU FILE: frontend/src/App.css ---
 
-.counter {
-  font-size: 16px;
-  padding: 5px 10px;
-  border-radius: 5px;
-  color: var(--accent);
-  background: var(--accent-bg);
-  border: 2px solid transparent;
-  transition: border-color 0.3s;
-  margin-bottom: 24px;
-
-  &:hover {
-    border-color: var(--accent-border);
-  }
-  &:focus-visible {
-    outline: 2px solid var(--accent);
-    outline-offset: 2px;
-  }
-}
-
-.hero {
-  position: relative;
-
-  .base,
-  .framework,
-  .vite {
-    inset-inline: 0;
+.app-container {
+    max-width: 900px;
     margin: 0 auto;
-  }
-
-  .base {
-    width: 170px;
-    position: relative;
-    z-index: 0;
-  }
-
-  .framework,
-  .vite {
-    position: absolute;
-  }
-
-  .framework {
-    z-index: 1;
-    top: 34px;
-    height: 28px;
-    transform: perspective(2000px) rotateZ(300deg) rotateX(44deg) rotateY(39deg)
-      scale(1.4);
-  }
-
-  .vite {
-    z-index: 0;
-    top: 107px;
-    height: 26px;
-    width: auto;
-    transform: perspective(2000px) rotateZ(300deg) rotateX(40deg) rotateY(39deg)
-      scale(0.8);
-  }
+    padding: 20px;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
-#center {
-  display: flex;
-  flex-direction: column;
-  gap: 25px;
-  place-content: center;
-  place-items: center;
-  flex-grow: 1;
-
-  @media (max-width: 1024px) {
-    padding: 32px 20px 24px;
-    gap: 18px;
-  }
-}
-
-#next-steps {
-  display: flex;
-  border-top: 1px solid var(--border);
-  text-align: left;
-
-  & > div {
-    flex: 1 1 0;
-    padding: 32px;
-    @media (max-width: 1024px) {
-      padding: 24px 20px;
-    }
-  }
-
-  .icon {
-    margin-bottom: 16px;
-    width: 22px;
-    height: 22px;
-  }
-
-  @media (max-width: 1024px) {
-    flex-direction: column;
+.app-header {
     text-align: center;
-  }
+    color: #333;
+    margin-bottom: 30px;
 }
 
-#docs {
-  border-right: 1px solid var(--border);
-
-  @media (max-width: 1024px) {
-    border-right: none;
-    border-bottom: 1px solid var(--border);
-  }
-}
-
-#next-steps ul {
-  list-style: none;
-  padding: 0;
-  display: flex;
-  gap: 8px;
-  margin: 32px 0 0;
-
-  .logo {
-    height: 18px;
-  }
-
-  a {
-    color: var(--text-h);
-    font-size: 16px;
-    border-radius: 6px;
-    background: var(--social-bg);
+.tabs-container {
     display: flex;
-    padding: 6px 12px;
-    align-items: center;
-    gap: 8px;
-    text-decoration: none;
-    transition: box-shadow 0.3s;
-
-    &:hover {
-      box-shadow: var(--shadow);
-    }
-    .button-icon {
-      height: 18px;
-      width: 18px;
-    }
-  }
-
-  @media (max-width: 1024px) {
-    margin-top: 20px;
-    flex-wrap: wrap;
-    justify-content: center;
-
-    li {
-      flex: 1 1 calc(50% - 8px);
-    }
-
-    a {
-      width: 100%;
-      justify-content: center;
-      box-sizing: border-box;
-    }
-  }
+    gap: 15px;
+    margin-bottom: 20px;
+    border-bottom: 2px solid #eee;
+    padding-bottom: 10px;
 }
 
-#spacer {
-  height: 88px;
-  border-top: 1px solid var(--border);
-  @media (max-width: 1024px) {
-    height: 48px;
-  }
+.tab-button {
+    padding: 10px 20px;
+    background: transparent;
+    border: none;
+    font-size: 16px;
+    cursor: pointer;
+    color: #666;
+    border-radius: 4px 4px 0 0;
+    transition: all 0.2s;
 }
 
-.ticks {
-  position: relative;
-  width: 100%;
-
-  &::before,
-  &::after {
-    content: '';
-    position: absolute;
-    top: -4.5px;
-    border: 5px solid transparent;
-  }
-
-  &::before {
-    left: 0;
-    border-left-color: var(--border);
-  }
-  &::after {
-    right: 0;
-    border-right-color: var(--border);
-  }
+.tab-button:hover {
+    background-color: #f8f9fa;
+    color: #333;
 }
 
+.tab-button.active {
+    font-weight: bold;
+    color: #007bff;
+    border-bottom: 3px solid #007bff;
+}
+
+.tab-content {
+    padding: 10px 0;
+}
+
+.draft-placeholder {
+    text-align: center;
+    padding: 50px;
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    color: #6c757d;
+}
 
 --- KẾT THÚC FILE: frontend/src/App.css ---
 
 
+--- BẮT ĐẦU FILE: frontend/src/components/DraftMode.css ---
+
+.draft-mode-container {
+    margin-top: 10px;
+}
+
+/* Khu vực thanh công cụ */
+.action-bar {
+    display: flex;
+    gap: 15px;
+    align-items: center;
+    background-color: #f1f3f5;
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+}
+
+.draft-select {
+    padding: 10px;
+    min-width: 250px;
+    border-radius: 4px;
+    border: 1px solid #ced4da;
+    font-size: 15px;
+}
+
+.action-buttons {
+    display: flex;
+    gap: 10px;
+}
+
+.action-buttons button {
+    padding: 10px 15px;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: opacity 0.2s;
+}
+
+.action-buttons button:disabled {
+    background-color: #adb5bd !important;
+    cursor: not-allowed;
+}
+
+.btn-ban { background-color: #343a40; }
+.btn-enemy { background-color: #dc3545; }
+.btn-ally { background-color: #0d6efd; }
+
+/* Khu vực Bàn cờ */
+.draft-board {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    margin-bottom: 30px;
+}
+
+.draft-section {
+    background-color: white;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 15px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.02);
+}
+
+.draft-section h3 {
+    margin-top: 0;
+    margin-bottom: 15px;
+    font-size: 16px;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 10px;
+}
+
+.enemy-title { color: #dc3545; }
+.ally-title { color: #0d6efd; }
+
+.teams-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+}
+
+/* Các thẻ tên tướng (Chips) */
+.hero-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    min-height: 35px; /* Giữ layout không bị nhảy khi trống */
+}
+
+.chip {
+    padding: 6px 12px;
+    border-radius: 20px;
+    color: white;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.chip button {
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    color: white;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 12px;
+}
+
+.chip button:hover {
+    background: rgba(255, 255, 255, 0.5);
+}
+
+.chip-ban { background-color: #495057; text-decoration: line-through; }
+.chip-enemy { background-color: #e4606d; }
+.chip-ally { background-color: #539bf5; }
+
+/* Khu vực Phân tích */
+.analysis-board {
+    background-color: #f8f9fa;
+    padding: 20px;
+    border-radius: 8px;
+    border-left: 4px solid #ffc107;
+}
+
+.analysis-board h2 {
+    margin-top: 0;
+    color: #333;
+}
+
+.loading-text {
+    color: #007bff;
+    font-weight: bold;
+    animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+    0% { opacity: 0.6; }
+    50% { opacity: 1; }
+    100% { opacity: 0.6; }
+}
+
+--- KẾT THÚC FILE: frontend/src/components/DraftMode.css ---
+
+
+--- BẮT ĐẦU FILE: frontend/src/components/HeroSelect.css ---
+
+.hero-select-container {
+    margin-bottom: 10px;
+}
+
+.hero-select-label {
+    font-weight: bold;
+    display: block;
+    margin-bottom: 5px;
+}
+
+.hero-select-dropdown {
+    padding: 8px;
+    width: 200px;
+    border-radius: 4px;
+    border: 1px solid #ccc;
+    font-size: 14px;
+}
+
+--- KẾT THÚC FILE: frontend/src/components/HeroSelect.css ---
+
+
+--- BẮT ĐẦU FILE: frontend/src/components/SoloCounter.css ---
+
+.solo-counter-container {
+    margin-top: 10px;
+}
+
+.solo-counter-title {
+    margin-bottom: 15px;
+    color: #2c3e50;
+}
+
+.btn-add-section {
+    margin-bottom: 20px;
+    padding: 10px 15px;
+    background-color: #28a745;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: background-color 0.2s;
+}
+
+.btn-add-section:hover {
+    background-color: #218838;
+}
+
+.search-section-card {
+    border: 1px solid #e0e0e0;
+    padding: 20px;
+    margin-bottom: 15px;
+    border-radius: 8px;
+    background-color: #fcfcfc;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.search-section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+}
+
+.btn-remove-section {
+    height: 35px;
+    color: #dc3545;
+    background-color: transparent;
+    border: 1px solid #dc3545;
+    border-radius: 4px;
+    cursor: pointer;
+    padding: 0 10px;
+    transition: all 0.2s;
+}
+
+.btn-remove-section:hover {
+    background-color: #dc3545;
+    color: white;
+}
+
+.btn-search {
+    padding: 10px 15px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-top: 10px;
+    font-weight: bold;
+}
+
+.btn-search.loading, .btn-search:disabled {
+    background-color: #6c757d;
+    cursor: not-allowed;
+}
+
+.results-container {
+    margin-top: 20px;
+}
+
+.results-list {
+    list-style-type: none;
+    padding-left: 0;
+}
+
+.result-item {
+    margin-bottom: 10px;
+    padding-bottom: 10px;
+    border-bottom: 1px dashed #ddd;
+}
+
+.result-item .score {
+    color: #555;
+    font-size: 0.9em;
+    margin-left: 5px;
+}
+
+.item-recommendation {
+    color: #d35400;
+    margin-left: 10px;
+    font-weight: 500;
+}
+
+.no-results {
+    color: #888;
+    font-style: italic;
+}
+
+--- KẾT THÚC FILE: frontend/src/components/SoloCounter.css ---
+
+
 --- BẮT ĐẦU FILE: frontend/src/index.css ---
 
-:root {
-  --text: #6b6375;
-  --text-h: #08060d;
-  --bg: #fff;
-  --border: #e5e4e7;
-  --code-bg: #f4f3ec;
-  --accent: #aa3bff;
-  --accent-bg: rgba(170, 59, 255, 0.1);
-  --accent-border: rgba(170, 59, 255, 0.5);
-  --social-bg: rgba(244, 243, 236, 0.5);
-  --shadow:
-    rgba(0, 0, 0, 0.1) 0 10px 15px -3px, rgba(0, 0, 0, 0.05) 0 4px 6px -2px;
-
-  --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --heading: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --mono: ui-monospace, Consolas, monospace;
-
-  font: 18px/145% var(--sans);
-  letter-spacing: 0.18px;
-  color-scheme: light dark;
-  color: var(--text);
-  background: var(--bg);
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-
-  @media (max-width: 1024px) {
-    font-size: 16px;
-  }
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --text: #9ca3af;
-    --text-h: #f3f4f6;
-    --bg: #16171d;
-    --border: #2e303a;
-    --code-bg: #1f2028;
-    --accent: #c084fc;
-    --accent-bg: rgba(192, 132, 252, 0.15);
-    --accent-border: rgba(192, 132, 252, 0.5);
-    --social-bg: rgba(47, 48, 58, 0.5);
-    --shadow:
-      rgba(0, 0, 0, 0.4) 0 10px 15px -3px, rgba(0, 0, 0, 0.25) 0 4px 6px -2px;
-  }
-
-  #social .button-icon {
-    filter: invert(1) brightness(2);
-  }
-}
-
-body {
-  margin: 0;
-}
-
-#root {
-  width: 1126px;
-  max-width: 100%;
-  margin: 0 auto;
-  text-align: center;
-  border-inline: 1px solid var(--border);
-  min-height: 100svh;
-  display: flex;
-  flex-direction: column;
-  box-sizing: border-box;
-}
-
-h1,
-h2 {
-  font-family: var(--heading);
-  font-weight: 500;
-  color: var(--text-h);
-}
-
-h1 {
-  font-size: 56px;
-  letter-spacing: -1.68px;
-  margin: 32px 0;
-  @media (max-width: 1024px) {
-    font-size: 36px;
-    margin: 20px 0;
-  }
-}
-h2 {
-  font-size: 24px;
-  line-height: 118%;
-  letter-spacing: -0.24px;
-  margin: 0 0 8px;
-  @media (max-width: 1024px) {
-    font-size: 20px;
-  }
-}
-p {
-  margin: 0;
-}
-
-code,
-.counter {
-  font-family: var(--mono);
-  display: inline-flex;
-  border-radius: 4px;
-  color: var(--text-h);
-}
-
-code {
-  font-size: 15px;
-  line-height: 135%;
-  padding: 4px 8px;
-  background: var(--code-bg);
-}
 
 
 --- KẾT THÚC FILE: frontend/src/index.css ---
+
+
+--- BẮT ĐẦU FILE: frontend/src/services/api.js ---
+
+import axios from 'axios'
+
+const apiClient = axios.create({
+    baseURL: 'http://localhost:5000/api',
+    headers: {
+        'Content-Type': 'application/json'
+    }
+})
+
+export const getHeroes = () => apiClient.get('/heroes');
+export const createHero = (heroData) => apiClient.post('/heroes', heroData)
+export const getItems = () => apiClient.get('/items');
+export const getCounters = (enemyIds, excludedIds = []) => apiClient.post('/matchups/recommend', { enemyIds, excludedIds });
+export default apiClient;
+
+--- KẾT THÚC FILE: frontend/src/services/api.js ---
 
 
 --- BẮT ĐẦU FILE: frontend/vite.config.js ---
