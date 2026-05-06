@@ -1,0 +1,242 @@
+/* =========================================
+   BỐ CỤC TỔNG THỂ ADMIN DASHBOARD
+========================================= */
+.admin-dashboard {
+    display: flex;
+    min-height: 80vh;
+    background-color: #f4f6f9; /* Màu nền xám nhạt cho không gian làm việc */
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    margin-top: 10px;
+}
+
+/* --- SIDEBAR (THANH ĐIỀU HƯỚNG BÊN TRÁI) --- */
+.admin-sidebar {
+    width: 250px;
+    background-color: #343a40; /* Màu xám đen chuẩn Admin */
+    color: white;
+    padding: 20px 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.admin-sidebar h3 {
+    text-align: center;
+    color: #adb5bd;
+    font-size: 14px;
+    letter-spacing: 1.5px;
+    margin-bottom: 20px;
+    text-transform: uppercase;
+}
+
+.admin-sidebar button {
+    background: transparent;
+    color: #ced4da;
+    border: none;
+    padding: 15px 20px;
+    text-align: left;
+    font-size: 16px;
+    cursor: pointer;
+    transition: all 0.2s;
+    border-left: 4px solid transparent;
+}
+
+.admin-sidebar button:hover {
+    background-color: #495057;
+    color: white;
+}
+
+.admin-sidebar button.active {
+    background-color: #007bff;
+    color: white;
+    border-left: 4px solid #80bdff;
+    font-weight: bold;
+}
+
+/* --- MAIN CONTENT (KHU VỰC LÀM VIỆC) --- */
+.admin-main {
+    flex: 1;
+    padding: 30px;
+    overflow-y: auto;
+}
+
+.manage-container {
+    background: white;
+    padding: 25px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+}
+
+.manage-container h2 {
+    margin-top: 0;
+    color: #2c3e50;
+    border-bottom: 2px solid #eee;
+    padding-bottom: 10px;
+    margin-bottom: 20px;
+}
+
+/* =========================================
+   FORM NHẬP LIỆU (THÊM TƯỚNG/TRANG BỊ)
+========================================= */
+.admin-form {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    margin-bottom: 40px;
+    background-color: #f8f9fa;
+    padding: 20px;
+    border-radius: 8px;
+    border: 1px solid #e9ecef;
+}
+
+.admin-form input[type="text"] {
+    padding: 12px;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    font-size: 15px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+/* Checkbox Vai trò */
+.checkbox-group {
+    background: white;
+    padding: 15px;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+}
+
+.checkbox-group label {
+    font-weight: bold;
+    display: block;
+    margin-bottom: 10px;
+    color: #495057;
+}
+
+.checkbox-group label:not(:first-child) {
+    display: inline-flex;
+    align-items: center;
+    font-weight: normal;
+    margin-right: 15px;
+    margin-bottom: 5px;
+    cursor: pointer;
+}
+
+.checkbox-group input[type="checkbox"] {
+    margin-right: 5px;
+    transform: scale(1.2);
+}
+
+/* Lưới nhập Kỹ năng */
+.skills-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+}
+
+.skills-grid textarea {
+    padding: 12px;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    font-size: 14px;
+    resize: vertical;
+    min-height: 80px;
+    font-family: inherit;
+}
+
+/* Nút Lưu */
+.btn-save {
+    padding: 12px 20px;
+    background-color: #28a745;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    align-self: flex-start;
+}
+
+.btn-save:hover {
+    background-color: #218838;
+}
+
+
+/* =========================================
+   BẢNG DỮ LIỆU (DATA TABLE)
+========================================= */
+.admin-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+}
+
+.admin-table th, .admin-table td {
+    padding: 12px 15px;
+    text-align: left;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.admin-table th {
+    background-color: #e9ecef;
+    color: #495057;
+    font-weight: bold;
+}
+
+.admin-table tbody tr:hover {
+    background-color: #f8f9fa;
+}
+
+/* Nút thao tác trong bảng */
+.btn-edit, .btn-del {
+    padding: 6px 12px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: bold;
+    color: white;
+}
+
+.btn-edit {
+    background-color: #ffc107;
+    color: #212529;
+    margin-right: 8px;
+}
+
+.btn-edit:hover { background-color: #e0a800; }
+
+.btn-del {
+    background-color: #dc3545;
+}
+
+.btn-del:hover { background-color: #c82333; }
+
+/* Đáp ứng màn hình nhỏ (Responsive) */
+@media (max-width: 768px) {
+    .admin-dashboard {
+        flex-direction: column;
+    }
+    .admin-sidebar {
+        width: 100%;
+        flex-direction: row;
+        overflow-x: auto;
+        padding: 10px;
+    }
+    .admin-sidebar h3 { display: none; }
+    .admin-sidebar button {
+        padding: 10px;
+        white-space: nowrap;
+        border-left: none;
+        border-bottom: 3px solid transparent;
+    }
+    .admin-sidebar button.active {
+        border-left: none;
+        border-bottom: 3px solid #80bdff;
+    }
+    .skills-grid {
+        grid-template-columns: 1fr;
+    }
+}

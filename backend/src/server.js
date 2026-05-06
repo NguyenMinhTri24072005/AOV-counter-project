@@ -6,6 +6,9 @@ const cors = require('cors');
 const heroRoutes = require('./routes/herroRoutes');
 const matchupRoutes = require('./routes/matchupRoutes');
 const itemRoutes = require('./routes/itemRoutes');
+const authRoutes = require('./routes/authRoutes');
+const roleRoutes = require('./routes/roleRoutes');
+const categoryRoutes = require('./routes/categoryRoutes');
 
 const app = express();
 
@@ -24,6 +27,9 @@ app.get('/', (req, res) => {
 app.use('/api/heroes', heroRoutes);
 app.use('/api/matchups', matchupRoutes);
 app.use('/api/items', itemRoutes);
+app.use('/api/auth', authRoutes);
+app.use('/api/roles', roleRoutes);
+app.use('/api/categories', categoryRoutes);
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
