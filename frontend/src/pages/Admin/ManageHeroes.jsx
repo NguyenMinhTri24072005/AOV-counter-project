@@ -9,12 +9,53 @@ const getAvatarUrl = (url) => {
 
 const LANE_OPTIONS = ['Top', 'Jungle', 'Mid', 'ADC', 'Support'];
 
+const SKILL_LABELS = {
+    passive: 'Nội tại',
+    skill1: 'Chiêu 1',
+    skill2: 'Chiêu 2',
+    skill3: 'Chiêu 3',
+    skill4: 'Chiêu 4',
+};
+
+const HeroDetailModal = ({ hero, onClose }) => {
+    if (!hero) return null;
+    const skills = hero.skills || {};
+    return (
+        <div className="card-detail-overlay" onClick={onClose}>
+            <div className="card-detail-popup hero-detail-popup" onClick={e => e.stopPropagation()}>
+                <button className="card-detail-close" onClick={onClose}>×</button>
+                <div className="card-detail-header">
+                    <img src={getAvatarUrl(hero.avatar)} alt={hero.name} className="card-detail-avatar hero-detail-avatar" />
+                    <div className="card-detail-header-info">
+                        <div className="card-detail-name">{hero.name}</div>
+                        <div className="card-detail-meta">{hero.roles?.map(r => r.name).join(', ')}</div>
+                        <div className="card-detail-lane">{hero.lane?.join(' · ') || 'Chưa xếp đường'}</div>
+                    </div>
+                </div>
+                <div className="card-detail-skills">
+                    {Object.entries(SKILL_LABELS).map(([key, label]) => (
+                        skills[key] ? (
+                            <div key={key} className="skill-detail-row">
+                                <span className="skill-detail-label">{label}</span>
+                                <span className="skill-detail-desc">{skills[key]}</span>
+                            </div>
+                        ) : null
+                    ))}
+                    {!Object.values(skills).some(Boolean) && (
+                        <div className="card-detail-empty">Chưa có thông tin kỹ năng.</div>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+};
+
 const ManageHeroes = () => {
     const [heroes, setHeroes] = useState([]);
     const [roles, setRoles] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
+    const [selectedHero, setSelectedHero] = useState(null);
 
-    // STATE BỘ LỌC & TÌM KIẾM
     const [searchTerm, setSearchTerm] = useState('');
     const [roleFilter, setRoleFilter] = useState('');
     const [laneFilter, setLaneFilter] = useState('');
@@ -35,7 +76,6 @@ const ManageHeroes = () => {
         setHeroes(resH.data); setRoles(resR.data);
     };
 
-    // LOGIC LỌC TƯỚNG
     const filteredHeroes = heroes.filter(hero => {
         const matchName = hero.name.toLowerCase().includes(searchTerm.toLowerCase());
         const matchRole = roleFilter ? hero.roles?.some(r => r._id === roleFilter) : true;
@@ -76,9 +116,7 @@ const ManageHeroes = () => {
                 const res = await uploadImage(uploadData);
                 avatarUrl = res.data.url;
             }
-
             const dataToSave = { ...formData, avatar: avatarUrl };
-
             if (editingId) {
                 await updateHero(editingId, dataToSave);
                 alert("Cập nhật tướng thành công!");
@@ -92,7 +130,8 @@ const ManageHeroes = () => {
         finally { setIsLoading(false); }
     };
 
-    const handleEditClick = (hero) => {
+    const handleEditClick = (hero, e) => {
+        e.stopPropagation();
         setFormData({
             name: hero.name,
             avatar: hero.avatar || '',
@@ -106,7 +145,8 @@ const ManageHeroes = () => {
         window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
-    const handleDeleteClick = async (id) => {
+    const handleDeleteClick = async (id, e) => {
+        e.stopPropagation();
         if (window.confirm("Xóa Tướng này? Sẽ gây ảnh hưởng nếu đang có kèo khắc chế liên quan.")) {
             await deleteHero(id); loadData();
         }
@@ -130,21 +170,15 @@ const ManageHeroes = () => {
                     <div className="form-col">
                         <input type="text" placeholder="Tên tướng" required
                             value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} />
-
                         <div className="form-row">
                             <input type="file" accept="image/*" onChange={handleFileChange} className="filter-input" style={{ padding: '7px' }} />
                             <input type="url" placeholder="Hoặc dán Link ảnh URL..."
                                 value={formData.avatar} onChange={e => setFormData({ ...formData, avatar: e.target.value })} className="filter-input" />
                         </div>
                     </div>
-
                     <div className="preview-box">
                         <span className="preview-label">Xem trước</span>
-                        <img
-                            src={previewUrl || getAvatarUrl(formData.avatar)}
-                            alt="Preview"
-                            className="preview-img"
-                        />
+                        <img src={previewUrl || getAvatarUrl(formData.avatar)} alt="Preview" className="preview-img" />
                     </div>
                 </div>
 
@@ -160,7 +194,6 @@ const ManageHeroes = () => {
                             ))}
                         </div>
                     </div>
-
                     <div className="checkbox-group checkbox-col">
                         <label>Đường đi (Lane):</label>
                         <div className="item-checkbox-list">
@@ -190,15 +223,8 @@ const ManageHeroes = () => {
                 </div>
             </form>
 
-            {/* BỘ LỌC TƯỚNG BÊN TRÊN LƯỚI GRID */}
             <div className="filter-bar">
-                <input
-                    type="text"
-                    placeholder="🔍 Tìm tên tướng..."
-                    value={searchTerm}
-                    onChange={e => setSearchTerm(e.target.value)}
-                    className="filter-input"
-                />
+                <input type="text" placeholder="🔍 Tìm tên tướng..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="filter-input" />
                 <select value={roleFilter} onChange={e => setRoleFilter(e.target.value)} className="filter-select">
                     <option value="">-- Tất cả vai trò --</option>
                     {roles.map(r => <option key={r._id} value={r._id}>{r.name}</option>)}
@@ -209,25 +235,18 @@ const ManageHeroes = () => {
                 </select>
             </div>
 
-            {/* LƯỚI GRID TƯỚNG ĐÃ ĐƯỢC LỌC */}
             <div className="hero-grid">
                 {filteredHeroes.length > 0 ? (
                     filteredHeroes.map(h => (
-                        <div key={h._id} className="hero-card">
+                        <div key={h._id} className="hero-card" onClick={() => setSelectedHero(h)} title="Nhấn để xem kỹ năng">
                             <img src={getAvatarUrl(h.avatar)} alt={h.name} className="hero-card-img" />
                             <span className="hero-card-name">{h.name}</span>
-
-                            <div className="hero-card-roles">
-                                {h.roles?.map(r => r.name).join(', ')}
-                            </div>
-
-                            <div className="hero-card-lane">
-                                {h.lane?.join(', ') || 'Chưa xếp đường'}
-                            </div>
-
+                            <div className="hero-card-roles">{h.roles?.map(r => r.name).join(', ')}</div>
+                            <div className="hero-card-lane">{h.lane?.join(', ') || 'Chưa xếp đường'}</div>
+                            <div className="card-click-hint">Nhấn để xem kỹ năng</div>
                             <div className="hero-card-actions">
-                                <button className="btn-edit" onClick={() => handleEditClick(h)}>Sửa</button>
-                                <button className="btn-del" onClick={() => handleDeleteClick(h._id)}>Xóa</button>
+                                <button className="btn-edit" onClick={(e) => handleEditClick(h, e)}>Sửa</button>
+                                <button className="btn-del" onClick={(e) => handleDeleteClick(h._id, e)}>Xóa</button>
                             </div>
                         </div>
                     ))
@@ -238,6 +257,7 @@ const ManageHeroes = () => {
                 )}
             </div>
 
+            {selectedHero && <HeroDetailModal hero={selectedHero} onClose={() => setSelectedHero(null)} />}
         </div>
     );
 };
