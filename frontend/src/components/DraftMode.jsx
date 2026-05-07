@@ -2,19 +2,28 @@ import React, { useState, useEffect, useContext } from 'react';
 import { getCounters } from '../services/api';
 import { AuthContext } from '../context/AuthContext';
 import ModeToggle from './ModeToggle';
+import HeroModal from './HeroModal';
 import './DraftMode.css';
+
+// HÀM HỖ TRỢ: Xử lý link ảnh (localhost hoặc link web)
+const getAvatarUrl = (url) => {
+    if (!url) return 'https://placehold.co/80x80?text=No+Image';
+    if (url.startsWith('http')) return url;
+    return `http://localhost:5000${url}`;
+};
 
 const DraftMode = ({ heroes }) => {
     const { user } = useContext(AuthContext);
     const [viewMode, setViewMode] = useState('standard');
 
-    const [bansEnemy, setBansEnemy] = useState([]); 
-    const [bansAlly, setBansAlly] = useState([]);   
-    const [picksEnemy, setPicksEnemy] = useState([]); 
-    const [picksAlly, setPicksAlly] = useState([]);   
-    
+    const [bansEnemy, setBansEnemy] = useState([]);
+    const [bansAlly, setBansAlly] = useState([]);
+    const [picksEnemy, setPicksEnemy] = useState([]);
+    const [picksAlly, setPicksAlly] = useState([]);
+
     const [selectedHero, setSelectedHero] = useState("");
-    
+    const [isModalOpen, setIsModalOpen] = useState(false);
+
     const [allEnemyCounters, setAllEnemyCounters] = useState([]);
     const [allAllyCounters, setAllAllyCounters] = useState([]);
     const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -28,7 +37,7 @@ const DraftMode = ({ heroes }) => {
         else if (actionType === 'banAlly' && bansAlly.length < 3) setBansAlly([...bansAlly, selectedHero]);
         else if (actionType === 'pickEnemy' && picksEnemy.length < 5) setPicksEnemy([...picksEnemy, selectedHero]);
         else if (actionType === 'pickAlly' && picksAlly.length < 5) setPicksAlly([...picksAlly, selectedHero]);
-        setSelectedHero(""); 
+        setSelectedHero("");
     };
 
     const handleRemoveHero = (actionType, heroId) => {
@@ -71,14 +80,24 @@ const DraftMode = ({ heroes }) => {
     const excludedFromThreats = [...bansEnemy, ...bansAlly, ...picksAlly];
     const threatsToOurTeam = allAllyCounters.filter(item => !excludedFromThreats.includes(item.hero._id));
 
+    // Lấy Tên và Ảnh của tướng từ ID
     const getHeroName = (id) => heroes.find(h => h._id === id)?.name || "Unknown";
+    const getHeroAvatar = (id) => heroes.find(h => h._id === id)?.avatar || "";
 
+    // COMPONENT CON: Ô hiển thị tướng trong bàn cờ
     const SlotBox = ({ type, id, onRemove, highlightClass }) => {
         if (!id) return <div className={`slot-box empty ${type}`}>Trống</div>;
         return (
-            <div className={`slot-box filled ${type} ${highlightClass || ''}`}>
-                <span className="hero-name">{getHeroName(id)}</span>
-                <button className="remove-btn" onClick={() => onRemove(id)}>×</button>
+            <div className={`slot-box filled ${type} ${highlightClass || ''}`} style={{ position: 'relative', overflow: 'hidden' }}>
+                <img 
+                    src={getAvatarUrl(getHeroAvatar(id))} 
+                    alt="Hero" 
+                    style={{ position: 'absolute', width: '100%', height: '100%', objectFit: 'cover', opacity: 0.35, top: 0, left: 0, zIndex: 1, borderRadius: '4px' }} 
+                />
+                <span className="hero-name" style={{ zIndex: 2, position: 'relative', fontWeight: 'bold', textShadow: '0px 1px 3px rgba(0,0,0,0.8)', color: '#fff' }}>
+                    {getHeroName(id)}
+                </span>
+                <button className="remove-btn" onClick={() => onRemove(id)} style={{ zIndex: 2, position: 'relative' }}>×</button>
             </div>
         );
     };
@@ -86,14 +105,25 @@ const DraftMode = ({ heroes }) => {
     return (
         <div className="draft-mode-container">
             <ModeToggle mode={viewMode} setMode={setViewMode} />
-            
+
             <div className="action-bar">
-                <select className="draft-select" value={selectedHero} onChange={(e) => setSelectedHero(e.target.value)}>
-                    <option value="" disabled>-- Chọn tướng vào bàn cờ --</option>
-                    {availableHeroes.map(hero => (
-                        <option key={hero._id} value={hero._id}>{hero.name} - {hero.role}</option>
-                    ))}
-                </select>
+                {/* NÚT GỌI POPUP CHỌN TƯỚNG */}
+                <div style={{ flex: 1 }}>
+                    <button
+                        className="draft-select"
+                        onClick={() => setIsModalOpen(true)}
+                        style={{ width: '100%', textAlign: 'left', background: 'white', color: selectedHero ? '#000' : '#888', padding: '12px', borderRadius: '6px', border: '2px solid #007bff', cursor: 'pointer', fontWeight: 'bold' }}
+                    >
+                        {selectedHero ? `👉 Đang nhắm: ${getHeroName(selectedHero)}` : '🔍 BẤM VÀO ĐÂY ĐỂ CHỌN TƯỚNG VÀO BÀN CỜ'}
+                    </button>
+
+                    <HeroModal
+                        isOpen={isModalOpen}
+                        onClose={() => setIsModalOpen(false)}
+                        heroes={availableHeroes} // Chỉ hiển thị tướng chưa bị Cấm/Chọn
+                        onSelect={(id) => setSelectedHero(id)}
+                    />
+                </div>
 
                 <div className="action-buttons">
                     <button className="btn-pick-ally" onClick={() => handleAddHero('pickAlly')} disabled={!selectedHero || picksAlly.length >= 5}>🛡️ Pick Ta ({picksAlly.length}/5)</button>
@@ -109,13 +139,13 @@ const DraftMode = ({ heroes }) => {
                     <div className="bans-row">
                         <h4>Tướng Cấm (3)</h4>
                         <div className="slots-container bans">
-                            {[0,1,2].map(i => <SlotBox key={`ab-${i}`} type="ban" id={bansAlly[i]} onRemove={(id) => handleRemoveHero('banAlly', id)} />)}
+                            {[0, 1, 2].map(i => <SlotBox key={`ab-${i}`} type="ban" id={bansAlly[i]} onRemove={(id) => handleRemoveHero('banAlly', id)} />)}
                         </div>
                     </div>
                     <div className="picks-row">
                         <h4>Tướng Chọn (5)</h4>
                         <div className="slots-container picks">
-                            {[0,1,2,3,4].map(i => {
+                            {[0, 1, 2, 3, 4].map(i => {
                                 const aId = picksAlly[i];
                                 const highlight = aId && isAllyCounteredByEnemy(aId) ? 'border-red' : '';
                                 return <SlotBox key={`ap-${i}`} type="pick" id={aId} highlightClass={highlight} onRemove={(id) => handleRemoveHero('pickAlly', id)} />
@@ -129,13 +159,13 @@ const DraftMode = ({ heroes }) => {
                     <div className="bans-row">
                         <h4>Tướng Cấm (4)</h4>
                         <div className="slots-container bans">
-                            {[0,1,2,3].map(i => <SlotBox key={`eb-${i}`} type="ban" id={bansEnemy[i]} onRemove={(id) => handleRemoveHero('banEnemy', id)} />)}
+                            {[0, 1, 2, 3].map(i => <SlotBox key={`eb-${i}`} type="ban" id={bansEnemy[i]} onRemove={(id) => handleRemoveHero('banEnemy', id)} />)}
                         </div>
                     </div>
                     <div className="picks-row">
                         <h4>Tướng Chọn (5)</h4>
                         <div className="slots-container picks">
-                            {[0,1,2,3,4].map(i => {
+                            {[0, 1, 2, 3, 4].map(i => {
                                 const eId = picksEnemy[i];
                                 const highlight = eId && isEnemyCounteredByAlly(eId) ? 'border-green' : '';
                                 return <SlotBox key={`ep-${i}`} type="pick" id={eId} highlightClass={highlight} onRemove={(id) => handleRemoveHero('pickEnemy', id)} />
@@ -145,6 +175,7 @@ const DraftMode = ({ heroes }) => {
                 </div>
             </div>
 
+            {/* BẢNG PHÂN TÍCH */}
             <div className="analysis-container">
                 <div className="analysis-board board-recommend">
                     <h2>📊 Tướng Đề Xuất Khắc Chế Địch</h2>
@@ -153,25 +184,28 @@ const DraftMode = ({ heroes }) => {
                             {recommendedToPick.map((rec) => {
                                 const isPickedByAlly = picksAlly.includes(rec.hero._id);
                                 return (
-                                    <div key={rec.hero._id} className="rec-card" style={{ border: isPickedByAlly ? '2px solid #28a745' : '1px solid #e0e0e0' }}>
-                                        <div className="rec-header">
-                                            <strong>{rec.hero.name} {isPickedByAlly && <span style={{ color: '#28a745', fontSize: '12px' }}>(Đã Chọn)</span>}</strong> 
-                                            <span className="score-badge">ĐIỂM: {rec.totalScore}</span>
-                                        </div>
-                                        <div className="rec-body">
-                                            <ul className="rec-details-list">
-                                                {rec.matchupDetails.map((detail, idx) => (
-                                                    <li key={idx}>
-                                                        Khắc chế <b>{getHeroName(detail.enemyId)}</b> ({detail.score}đ)
-                                                        <div className="rec-note">
-                                                            "{detail.note}"
-                                                            <div style={{ fontSize: '11px', marginTop: '3px', color: detail.isSystem ? '#007bff' : '#28a745', fontWeight: 'bold' }}>
-                                                                Nguồn: {detail.isSystem ? 'Hệ Thống' : detail.authorName}
+                                    <div key={rec.hero._id} className="rec-card" style={{ border: isPickedByAlly ? '2px solid #28a745' : '1px solid #e0e0e0', display: 'flex', gap: '15px' }}>
+                                        <img src={getAvatarUrl(rec.hero.avatar)} style={{ width: '60px', height: '60px', borderRadius: '8px', objectFit: 'cover' }} alt="hero" />
+                                        <div style={{ flex: 1 }}>
+                                            <div className="rec-header" style={{ padding: 0, border: 'none', background: 'transparent' }}>
+                                                <strong>{rec.hero.name} {isPickedByAlly && <span style={{ color: '#28a745', fontSize: '12px' }}>(Đã Chọn)</span>}</strong>
+                                                <span className="score-badge">ĐIỂM: {rec.totalScore}</span>
+                                            </div>
+                                            <div className="rec-body" style={{ padding: '10px 0 0 0' }}>
+                                                <ul className="rec-details-list">
+                                                    {rec.matchupDetails.map((detail, idx) => (
+                                                        <li key={idx}>
+                                                            Khắc chế <b>{getHeroName(detail.enemyId)}</b> ({detail.score}đ)
+                                                            <div className="rec-note">
+                                                                "{detail.note}"
+                                                                <div style={{ fontSize: '11px', marginTop: '3px', color: detail.isSystem ? '#007bff' : '#28a745', fontWeight: 'bold' }}>
+                                                                    Nguồn: {detail.isSystem ? 'Hệ Thống' : detail.authorName}
+                                                                </div>
                                                             </div>
-                                                        </div>
-                                                    </li>
-                                                ))}
-                                            </ul>
+                                                        </li>
+                                                    ))}
+                                                </ul>
+                                            </div>
                                         </div>
                                     </div>
                                 );
@@ -179,7 +213,7 @@ const DraftMode = ({ heroes }) => {
                         </div>
                     ) : <p className="no-results">Chưa có đề xuất nào.</p>}
                 </div>
-                
+
                 <div className="analysis-board board-threat">
                     <h2>⚠️ Cảnh báo: Tướng Địch khắc chế Ta</h2>
                     {isAnalyzing ? <p className="loading-text">Đang phân tích...</p> : threatsToOurTeam.length > 0 ? (
@@ -187,25 +221,28 @@ const DraftMode = ({ heroes }) => {
                             {threatsToOurTeam.map((threat) => {
                                 const isPickedByEnemy = picksEnemy.includes(threat.hero._id);
                                 return (
-                                    <div key={threat.hero._id} className="rec-card threat-card" style={{ border: isPickedByEnemy ? '2px solid #dc3545' : '1px solid #e0e0e0' }}>
-                                        <div className="rec-header threat-header">
-                                            <strong>{threat.hero.name} {isPickedByEnemy && <span style={{ color: '#dc3545', fontSize: '12px' }}>(Địch Đã Chọn)</span>}</strong> 
-                                            <span className="score-badge threat-badge">NGUY HIỂM: {threat.totalScore}</span>
-                                        </div>
-                                        <div className="rec-body">
-                                            <ul className="rec-details-list">
-                                                {threat.matchupDetails.map((detail, idx) => (
-                                                    <li key={idx}>
-                                                        Khắc chế <b>{getHeroName(detail.enemyId)}</b> ({detail.score}đ)
-                                                        <div className="rec-note">
-                                                            "{detail.note}"
-                                                            <div style={{ fontSize: '11px', marginTop: '3px', color: detail.isSystem ? '#007bff' : '#28a745', fontWeight: 'bold' }}>
-                                                                Nguồn: {detail.isSystem ? 'Hệ Thống' : detail.authorName}
+                                    <div key={threat.hero._id} className="rec-card threat-card" style={{ border: isPickedByEnemy ? '2px solid #dc3545' : '1px solid #e0e0e0', display: 'flex', gap: '15px' }}>
+                                        <img src={getAvatarUrl(threat.hero.avatar)} style={{ width: '60px', height: '60px', borderRadius: '8px', objectFit: 'cover' }} alt="hero" />
+                                        <div style={{ flex: 1 }}>
+                                            <div className="rec-header threat-header" style={{ padding: 0, border: 'none', background: 'transparent' }}>
+                                                <strong>{threat.hero.name} {isPickedByEnemy && <span style={{ color: '#dc3545', fontSize: '12px' }}>(Địch Đã Chọn)</span>}</strong>
+                                                <span className="score-badge threat-badge">NGUY HIỂM: {threat.totalScore}</span>
+                                            </div>
+                                            <div className="rec-body" style={{ padding: '10px 0 0 0' }}>
+                                                <ul className="rec-details-list">
+                                                    {threat.matchupDetails.map((detail, idx) => (
+                                                        <li key={idx}>
+                                                            Khắc chế <b>{getHeroName(detail.enemyId)}</b> ({detail.score}đ)
+                                                            <div className="rec-note">
+                                                                "{detail.note}"
+                                                                <div style={{ fontSize: '11px', marginTop: '3px', color: detail.isSystem ? '#007bff' : '#28a745', fontWeight: 'bold' }}>
+                                                                    Nguồn: {detail.isSystem ? 'Hệ Thống' : detail.authorName}
+                                                                </div>
                                                             </div>
-                                                        </div>
-                                                    </li>
-                                                ))}
-                                            </ul>
+                                                        </li>
+                                                    ))}
+                                                </ul>
+                                            </div>
                                         </div>
                                     </div>
                                 );

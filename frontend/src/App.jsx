@@ -1,5 +1,5 @@
 import React, { useContext, useState, useEffect } from 'react';
-import { Routes, Route, Link, useNavigate } from 'react-router-dom';
+import { Routes, Route, Link, useNavigate, Navigate } from 'react-router-dom';
 import { AuthContext } from './context/AuthContext';
 import Login from './pages/Login';
 import Register from './pages/Register';
@@ -8,9 +8,10 @@ import DraftMode from './components/DraftMode';
 import { getHeroes } from './services/api';
 import './App.css';
 
-// --- IMPORT CỦA GIAI ĐOẠN 3 ---
+// --- IMPORT CÁC TRANG QUẢN TRỊ & CÁ NHÂN ---
 import AdminDashboard from './pages/Admin/AdminDashboard';
 import AdminRoute from './components/AdminRoute';
+import UserDashboard from './pages/User/UserDashboard'; // <-- IMPORT MỚI
 
 const HomeTabs = ({ heroes }) => {
     const [activeTab, setActiveTab] = useState('solo');
@@ -51,7 +52,7 @@ function App() {
 
     const handleLogout = () => {
         logout();
-        navigate('/login'); // Đăng xuất xong đẩy về trang đăng nhập
+        navigate('/login');
     };
 
     return (
@@ -67,13 +68,21 @@ function App() {
                         <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
                             <span>Xin chào, <strong>{user.username}</strong> ({user.role === 'admin' ? '👑 Admin' : '👤 User'})</span>
                             
-                            {/* ĐÃ FIX: Chỉ hiển thị nút Dashboard nếu là Admin và gắn sự kiện chuyển trang */}
+                            {/* NÚT VÀO TRANG CÁ NHÂN (Cho mọi User đã đăng nhập) */}
+                            <button 
+                                onClick={() => navigate('/profile')}
+                                style={{ padding: '6px 12px', background: '#28a745', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}
+                            >
+                                👤 Trang Cá Nhân
+                            </button>
+
+                            {/* NÚT VÀO DASHBOARD ADMIN (Chỉ Admin mới thấy) */}
                             {user.role === 'admin' && (
                                 <button 
                                     onClick={() => navigate('/admin')}
                                     style={{ padding: '6px 12px', background: '#17a2b8', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}
                                 >
-                                    Dashboard Admin
+                                    👑 Quản Trị
                                 </button>
                             )}
 
@@ -94,7 +103,12 @@ function App() {
                 <Route path="/login" element={<Login />} />
                 <Route path="/register" element={<Register />} />
                 
-                {/* ĐÃ FIX: Đăng ký đường dẫn bảo mật cho trang Admin */}
+                {/* Route cho User thường (Yêu cầu đăng nhập) */}
+                <Route path="/profile" element={
+                    user ? <UserDashboard /> : <Navigate to="/login" replace />
+                } />
+
+                {/* Route cho Admin (Yêu cầu quyền Admin) */}
                 <Route path="/admin" element={
                     <AdminRoute>
                         <AdminDashboard />

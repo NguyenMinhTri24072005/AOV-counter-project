@@ -5,7 +5,7 @@ const heroSchema = new mongoose.Schema({
     // SỬA ĐỔI: Role bây giờ là mảng tham chiếu đến bảng Role (Một tướng có thể có nhiều Role)
     roles: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Role' }], 
     lane: [{ type: String, required: true }],
-    avatar: { type: String },
+    avatar: { type: String, default: '' },
     tags: [{ type: String }],
     // MỚI: Thêm bộ kỹ năng
     skills: {

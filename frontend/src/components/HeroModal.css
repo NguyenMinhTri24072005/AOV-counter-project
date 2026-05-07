@@ -1,0 +1,157 @@
+.hero-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+    backdrop-filter: blur(3px);
+}
+
+.hero-modal-content {
+    background: white;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 650px;
+    height: 80vh;
+    max-height: 700px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.hero-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 20px;
+    background: #343a40;
+    color: white;
+}
+
+.hero-modal-header h3 {
+    margin: 0;
+    font-size: 18px;
+}
+
+.btn-close-modal {
+    background: transparent;
+    border: none;
+    color: white;
+    font-size: 28px;
+    cursor: pointer;
+    line-height: 1;
+}
+
+.hero-modal-filters {
+    display: flex;
+    gap: 10px;
+    padding: 15px 20px;
+    background: #f8f9fa;
+    border-bottom: 1px solid #eee;
+}
+
+.hero-modal-filters input,
+.hero-modal-filters select {
+    padding: 10px;
+    border: 1px solid #ced4da;
+    border-radius: 6px;
+    outline: none;
+}
+
+.search-input {
+    flex: 2;
+}
+
+.hero-modal-filters select {
+    flex: 1;
+}
+
+.hero-modal-grid {
+    padding: 20px;
+    flex: 1;
+    overflow-y: auto;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+    gap: 15px;
+    align-content: start;
+}
+
+.hero-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    cursor: pointer;
+    padding: 10px;
+    border-radius: 8px;
+    transition: all 0.2s;
+    border: 1px solid transparent;
+}
+
+.hero-card:hover {
+    background: #e9ecef;
+    border-color: #007bff;
+    transform: translateY(-3px);
+}
+
+.hero-avatar {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    object-fit: cover;
+    margin-bottom: 8px;
+    border: 2px solid #ccc;
+}
+
+.hero-card:hover .hero-avatar {
+    border-color: #007bff;
+}
+
+.hero-name-label {
+    font-size: 13px;
+    font-weight: 600;
+    text-align: center;
+    color: #333;
+}
+
+.no-heroes-found {
+    grid-column: 1 / -1;
+    text-align: center;
+    color: #888;
+    padding: 20px;
+}
+
+/* Responsive cho điện thoại */
+@media (max-width: 600px) {
+    .hero-modal-filters {
+        flex-direction: column;
+    }
+
+    .hero-modal-grid {
+        grid-template-columns: repeat(auto-fill, minmax(75px, 1fr));
+        gap: 10px;
+    }
+
+    .hero-avatar {
+        width: 50px;
+        height: 50px;
+    }
+}

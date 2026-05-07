@@ -52,4 +52,9 @@ export const createMatchup = (data) => apiClient.post('/matchups', data);
 export const getMyMatchups = (userId) => apiClient.get(`/matchups/user/${userId}`);
 export const deleteMatchup = (id) => apiClient.delete(`/matchups/${id}`);
 
+// THÊM HÀM NÀY ĐỂ UPLOAD ẢNH
+export const uploadImage = (formData) => apiClient.post('/upload', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+});
+
 export default apiClient;
