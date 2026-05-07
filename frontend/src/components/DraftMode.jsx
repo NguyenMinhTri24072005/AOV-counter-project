@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { getCounters } from '../services/api';
+import { getCounters, getStrategies } from '../services/api'; 
 import { AuthContext } from '../context/AuthContext';
 import ModeToggle from './ModeToggle';
 import HeroModal from './HeroModal';
@@ -23,8 +23,10 @@ const DraftMode = ({ heroes }) => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [targetAction, setTargetAction] = useState({ type: null, index: null });
 
+    // STATE DỮ LIỆU
     const [allEnemyCounters, setAllEnemyCounters] = useState([]);
     const [allAllyCounters, setAllAllyCounters] = useState([]);
+    const [advancedStrategies, setAdvancedStrategies] = useState([]); 
     const [isAnalyzing, setIsAnalyzing] = useState(false);
 
     const validBansEnemy = bansEnemy.filter(Boolean);
@@ -71,6 +73,7 @@ const DraftMode = ({ heroes }) => {
         }
     };
 
+    // FETCH TOÀN BỘ DỮ LIỆU KHI CÓ SỰ THAY ĐỔI TƯỚNG HOẶC CHẾ ĐỘ
     useEffect(() => {
         const fetchAllRelations = async () => {
             setIsAnalyzing(true);
@@ -84,6 +87,10 @@ const DraftMode = ({ heroes }) => {
                     const resAlly = await getCounters(validPicksAlly, [], viewMode, user?.id);
                     setAllAllyCounters(resAlly.data);
                 } else setAllAllyCounters([]);
+
+                const resStrats = await getStrategies(viewMode, user?.id);
+                setAdvancedStrategies(resStrats.data);
+
             } catch (error) {
                 console.error("Lỗi phân tích đội hình:", error);
             } finally {
@@ -91,32 +98,84 @@ const DraftMode = ({ heroes }) => {
             }
         };
         fetchAllRelations();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [picksEnemy, picksAlly, viewMode, user]); 
 
+    // --- LOGIC PHÂN TÍCH 1V1 ---
     const isEnemyCounteredByAlly = (enemyId) => allEnemyCounters.some(c => validPicksAlly.includes(c.hero._id) && c.matchupDetails.some(d => d.enemyId === enemyId));
     const isAllyCounteredByEnemy = (allyId) => allAllyCounters.some(c => validPicksEnemy.includes(c.hero._id) && c.matchupDetails.some(d => d.enemyId === allyId));
-
     const getHeroName = (id) => heroes.find(h => h._id === id)?.name || "Unknown";
     const getHeroAvatar = (id) => heroes.find(h => h._id === id)?.avatar || "";
 
     const excludedFromRecommendations = [...validBansEnemy, ...validBansAlly, ...validPicksEnemy];
     const recommendedToPick = allEnemyCounters.filter(item => !excludedFromRecommendations.includes(item.hero._id));
-
     const excludedFromThreats = [...validBansEnemy, ...validBansAlly, ...validPicksAlly];
     const threatsToOurTeam = allAllyCounters.filter(item => !excludedFromThreats.includes(item.hero._id));
 
-    // HÀM HỖ TRỢ: Lọc dữ liệu dùng cho Split View (So sánh chéo)
-    const getFilteredCards = (cards, sourceFilter) => {
-        if (!cards) return [];
-        return cards.map(card => {
-            const filteredDetails = card.matchupDetails.filter(d => {
-                if (sourceFilter === 'system') return d.isSystem;
-                if (sourceFilter === 'personal') return !d.isSystem; // Kèo của user
-                return true;
+    // ========================================================
+    // --- THUẬT TOÁN CHIẾN THUẬT NÂNG CAO (AI TỰ ĐỘNG SUY LUẬN) ---
+    // ========================================================
+
+    // 1. Kèo Kỹ Năng 2 Chiều 
+    const skillMatchups = [];
+    advancedStrategies.forEach(s => {
+        if (s.type === 'skill_matchup') {
+            if (s.teamB.some(h => validPicksEnemy.includes(h._id))) {
+                skillMatchups.push(s);
+            } else if (s.teamA.some(h => validPicksEnemy.includes(h._id))) {
+                skillMatchups.push({ ...s, teamA: s.teamB, teamB: s.teamA });
+            }
+        }
+    });
+
+    // 2. Phối hợp đồng đội (Gợi ý cho đội Ta)
+    const allySynergies = advancedStrategies.filter(s => 
+        s.type === 'synergy' && 
+        s.teamA.some(h => validPicksAlly.includes(h._id)) && 
+        !s.teamA.every(h => validPicksAlly.includes(h._id)) 
+    );
+
+    // 3. Cảnh báo Combo địch (Nâng cấp AI suy luận)
+    const enemyCombosRaw = [];
+    advancedStrategies.forEach(s => {
+        // Cảnh báo từ các Synergy được khai báo
+        if (s.type === 'synergy' && s.teamA.some(h => validPicksEnemy.includes(h._id))) {
+            enemyCombosRaw.push(s);
+        }
+        
+        // AI TỰ ĐỘNG SUY LUẬN: Nếu địch pick tướng nằm trong teamB của "Đội hình phá giải"
+        if (s.type === 'combo_counter' && s.teamB.some(h => validPicksEnemy.includes(h._id))) {
+            enemyCombosRaw.push({
+                ...s,
+                _id: s._id + '_auto', // Tránh trùng key UI
+                type: 'synergy',      // Ép kiểu thành synergy để chỉ hiển thị 1 phe địch
+                teamA: s.teamB,       
+                teamB: [],
+                note: "" // XÓA GHI CHÚ ĐỂ TRÁNH BỊ "LẠT QUẺ"
             });
-            return { ...card, matchupDetails: filteredDetails };
-        }).filter(card => card.matchupDetails.length > 0);
-    };
+        }
+    });
+
+    // Lọc trùng lặp combo để tránh 1 cảnh báo hiện 2 lần
+    const uniqueEnemyCombos = [];
+    const seenCombos = new Set();
+    enemyCombosRaw.forEach(c => {
+        const comboStr = c.teamA.map(h => h._id).join(',');
+        if (!seenCombos.has(comboStr)) {
+            seenCombos.add(comboStr);
+            uniqueEnemyCombos.push(c);
+        }
+    });
+
+    // 4. Phá giải đội hình (Gợi ý phe ta)
+    const comboCounters = advancedStrategies.filter(s =>
+        s.type === 'combo_counter' &&
+        s.teamB.some(h => validPicksEnemy.includes(h._id))
+    );
+
+    // ========================================================
+    // --- GIAO DIỆN COMPONENT ---
+    // ========================================================
 
     const SlotBox = ({ type, id, index, highlightClass }) => {
         if (!id) return (
@@ -135,14 +194,25 @@ const DraftMode = ({ heroes }) => {
         );
     };
 
-    // HÀM HIỂN THỊ DANH SÁCH CARD (Dùng chung để tránh lặp code)
+    const getFilteredCards = (cards, sourceFilter) => {
+        if (!cards) return [];
+        return cards.map(card => {
+            const filteredDetails = card.matchupDetails.filter(d => {
+                if (sourceFilter === 'system') return d.isSystem;
+                if (sourceFilter === 'personal') return !d.isSystem; 
+                return true;
+            });
+            return { ...card, matchupDetails: filteredDetails };
+        }).filter(card => card.matchupDetails.length > 0);
+    };
+
+    // UI: RENDER CARD 1V1
     const renderCards = (cardsList, isThreatBox) => {
-        if (cardsList.length === 0) return <p className="no-results" style={{ fontSize: '13px' }}>Không có dữ liệu phù hợp.</p>;
+        if (cardsList.length === 0) return <p className="no-results" style={{ fontSize: '13px' }}>Không có dữ liệu 1v1 phù hợp.</p>;
         
         return (
             <div className="recommendation-grid">
                 {cardsList.map((dataObj) => {
-                    // Check xem tướng này ta đã chọn (nếu là recommend) hay địch đã chọn (nếu là threat)
                     const isPicked = isThreatBox ? validPicksEnemy.includes(dataObj.hero._id) : validPicksAlly.includes(dataObj.hero._id);
                     const colorMain = isThreatBox ? '#dc3545' : '#28a745';
                     const textLabel = isThreatBox ? '(Địch Đã Chọn)' : '(Đã Chọn)';
@@ -162,7 +232,6 @@ const DraftMode = ({ heroes }) => {
                                         {dataObj.matchupDetails.map((detail, idx) => (
                                             <li key={idx}>
                                                 Khắc chế 
-                                                {/* MINI AVATAR TẠI ĐÂY */}
                                                 <img src={getAvatarUrl(getHeroAvatar(detail.enemyId))} className="mini-inline-avatar" alt="enemy" title={getHeroName(detail.enemyId)} />
                                                 <b style={{color: isThreatBox ? '#ef4444' : '#f59e0b'}}>{getHeroName(detail.enemyId)}</b> ({detail.score}đ)
                                                 
@@ -180,6 +249,81 @@ const DraftMode = ({ heroes }) => {
                         </div>
                     );
                 })}
+            </div>
+        );
+    };
+
+    // UI: RENDER CHIẾN THUẬT NÂNG CAO (ĐÃ ĐẢO VỊ TRÍ TRÁI-PHẢI)
+    const renderAdvancedCards = (stratList, title, themeColor, isThreatBox = false) => {
+        if (!stratList || stratList.length === 0) return null;
+        
+        const getFilteredStrats = (list, sourceFilter) => list.filter(s => sourceFilter === 'system' ? s.isSystem : !s.isSystem);
+
+        const StrategyList = ({ data }) => {
+            if(data.length === 0) return <p className="no-results" style={{fontSize:'12px'}}>Không có chiến thuật này.</p>;
+            return (
+                <div className="strat-advanced-grid">
+                    {data.map(strat => (
+                        <div key={strat._id} className="strat-advanced-card" style={{ borderLeftColor: themeColor }}>
+                            <div className="adv-card-header">
+                                <span className="adv-type">{strat.type === 'skill_matchup' ? '⚔️ 50/50' : (strat.type === 'synergy' ? '🤝 COMBO' : '🛡️ KHẮC CHẾ')}</span>
+                                <span className="adv-author">Bởi: {strat.isSystem ? 'Hệ thống' : strat.author?.username}</span>
+                            </div>
+                            <div className="adv-teams">
+                                
+                                {/* BÊN TRÁI: GỢI Ý CHO TA (Hoặc Combo địch nếu là khối Cảnh Báo) */}
+                                <div className={`mini-team-row ${isThreatBox ? 'enemy-shadow' : 'ally-shadow'}`}>
+                                    {strat.teamA.map(h => (
+                                        <div key={h._id} className="strat-hero-icon-wrap">
+                                            <img src={getAvatarUrl(h.avatar)} title={h.name} alt={h.name} />
+                                            <span className="strat-hero-name">{h.name}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                                
+                                {/* BÊN PHẢI: ĐỐI THỦ (Nếu có) */}
+                                {strat.type !== 'synergy' && strat.teamB?.length > 0 && (
+                                    <>
+                                        <div className="adv-vs">{strat.type === 'skill_matchup' ? '50/50' : 'VS'}</div>
+                                        <div className={`mini-team-row ${isThreatBox ? 'ally-shadow' : 'enemy-shadow'}`}>
+                                            {strat.teamB.map(h => (
+                                                <div key={h._id} className="strat-hero-icon-wrap">
+                                                    <img src={getAvatarUrl(h.avatar)} title={h.name} alt={h.name} />
+                                                    <span className="strat-hero-name">{h.name}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </>
+                                )}
+
+                            </div>
+                            {/* {strat.note && strat.note.trim() !== "" && (
+                                <p className="adv-note">"{strat.note}"</p>
+                            )} */}
+                        </div>
+                    ))}
+                </div>
+            )
+        };
+
+        return (
+            <div className="advanced-strategy-block" style={{ borderTop: `2px solid ${themeColor}` }}>
+                <h3 className="advanced-block-title" style={{ color: themeColor }}>{title}</h3>
+                
+                {viewMode === 'compare' ? (
+                    <div className="compare-split-layout">
+                        <div className="compare-col system-col">
+                            <h4 className="compare-sub-title">🤖 HỆ THỐNG</h4>
+                            <StrategyList data={getFilteredStrats(stratList, 'system')} />
+                        </div>
+                        <div className="compare-col personal-col">
+                            <h4 className="compare-sub-title">👤 CÁ NHÂN</h4>
+                            <StrategyList data={getFilteredStrats(stratList, 'personal')} />
+                        </div>
+                    </div>
+                ) : (
+                    <StrategyList data={stratList} />
+                )}
             </div>
         );
     };
@@ -233,46 +377,61 @@ const DraftMode = ({ heroes }) => {
             </div>
 
             <div className="analysis-container">
-                {/* BẢNG ĐỀ XUẤT */}
+                {isAnalyzing && <p className="loading-text" style={{ textAlign: 'center', width: '100%', padding: '10px' }}>Máy chủ đang phân tích...</p>}
+
+                {/* KHU VỰC 1: ĐỀ XUẤT 1V1 VÀ COMBO PHÁ GIẢI (MÀU XANH) */}
                 <div className="analysis-board board-recommend">
-                    <h2>📊 Tướng Đề Xuất Khắc Chế Địch</h2>
-                    {isAnalyzing ? <p className="loading-text">Máy chủ đang phân tích...</p> : (
-                        viewMode === 'compare' ? (
+                    <h2>📊 GỢI Ý CHIẾN THUẬT CHO ĐỘI TA</h2>
+                    
+                    {/* Bảng Đề xuất 1v1 */}
+                    <div className="sub-board">
+                        <h3 className="sub-board-title">Khắc chế 1v1</h3>
+                        {viewMode === 'compare' ? (
                             <div className="compare-split-layout">
                                 <div className="compare-col system-col">
-                                    <h3 className="compare-sub-title">🤖 HỆ THỐNG</h3>
+                                    <h4 className="compare-sub-title">🤖 HỆ THỐNG</h4>
                                     {renderCards(getFilteredCards(recommendedToPick, 'system'), false)}
                                 </div>
                                 <div className="compare-col personal-col">
-                                    <h3 className="compare-sub-title">👤 CÁ NHÂN</h3>
+                                    <h4 className="compare-sub-title">👤 CÁ NHÂN</h4>
                                     {renderCards(getFilteredCards(recommendedToPick, 'personal'), false)}
                                 </div>
                             </div>
                         ) : (
                             renderCards(recommendedToPick, false)
-                        )
-                    )}
+                        )}
+                    </div>
+
+                    {/* HIỂN THỊ KÈO 50/50 VÀ COMBO TẠI ĐÂY */}
+                    {renderAdvancedCards(skillMatchups, '⚔️ KÈO KỸ NĂNG (ĐỐI ĐẦU SÒNG PHẲNG)', '#f59e0b', false)}
+                    {renderAdvancedCards(allySynergies, '🤝 GỢI Ý PHỐI HỢP ĐỒNG ĐỘI (COMBO)', '#10b981', false)}
+                    {renderAdvancedCards(comboCounters, '🛡️ PHÁ GIẢI ĐỘI HÌNH ĐỊCH', '#38bdf8', false)}
                 </div>
 
-                {/* BẢNG CẢNH BÁO NGUY HIỂM */}
+                {/* KHU VỰC 2: CẢNH BÁO NGUY HIỂM TỪ ĐỊCH (MÀU ĐỎ) */}
                 <div className="analysis-board board-threat">
-                    <h2>⚠️ Cảnh báo: Tướng Địch khắc chế Ta</h2>
-                    {isAnalyzing ? <p className="loading-text">Đang phân tích...</p> : (
-                        viewMode === 'compare' ? (
+                    <h2>⚠️ PHÂN TÍCH MỐI ĐE DỌA TỪ ĐỊCH</h2>
+                    
+                    <div className="sub-board">
+                        <h3 className="sub-board-title">Tướng Địch khắc chế Ta (1v1)</h3>
+                        {viewMode === 'compare' ? (
                             <div className="compare-split-layout">
                                 <div className="compare-col system-col">
-                                    <h3 className="compare-sub-title">🤖 HỆ THỐNG</h3>
+                                    <h4 className="compare-sub-title">🤖 HỆ THỐNG</h4>
                                     {renderCards(getFilteredCards(threatsToOurTeam, 'system'), true)}
                                 </div>
                                 <div className="compare-col personal-col">
-                                    <h3 className="compare-sub-title">👤 CÁ NHÂN</h3>
+                                    <h4 className="compare-sub-title">👤 CÁ NHÂN</h4>
                                     {renderCards(getFilteredCards(threatsToOurTeam, 'personal'), true)}
                                 </div>
                             </div>
                         ) : (
                             renderCards(threatsToOurTeam, true)
-                        )
-                    )}
+                        )}
+                    </div>
+
+                    {/* HIỂN THỊ CẢNH BÁO ĐỊCH TẠI ĐÂY (TRUYỀN BIẾN TRUE ĐỂ KHUNG MÀU ĐỎ LÊN TRƯỚC) */}
+                    {renderAdvancedCards(uniqueEnemyCombos, '🚨 BÁO ĐỘNG: ĐỊCH ĐANG XÂY DỰNG COMBO', '#ef4444', true)}
                 </div>
             </div>
         </div>

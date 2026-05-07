@@ -10,6 +10,7 @@ const itemRoutes = require('./routes/itemRoutes');
 const matchupRoutes = require('./routes/matchupRoutes');
 const roleRoutes = require('./routes/roleRoutes');
 const categoryRoutes = require('./routes/categoryRoutes');
+const strategyRoutes = require('./routes/strategyRoutes');
 
 const app = express();
 
@@ -32,6 +33,7 @@ app.use('/api/items', itemRoutes);
 app.use('/api/matchups', matchupRoutes);
 app.use('/api/roles', roleRoutes);
 app.use('/api/categories', categoryRoutes);
+app.use('/api/strategies', strategyRoutes);
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {

@@ -56,5 +56,28 @@ export const deleteMatchup = (id) => apiClient.delete(`/matchups/${id}`);
 export const uploadImage = (formData) => apiClient.post('/upload', formData, {
     headers: { 'Content-Type': 'multipart/form-data' }
 });
+// ==========================================
+// THÊM MỚI: API CHO CHIẾN THUẬT NÂNG CAO (STRATEGY)
+// ==========================================
+
+// Lấy danh sách chiến thuật nâng cao (Combo, Synergy, Kỹ năng)
+export const getStrategies = (mode = 'standard', userId = null) => {
+    return apiClient.post('/strategies/filter', { mode, userId }); // Sửa API thành apiClient
+};
+
+// Tạo chiến thuật nâng cao mới
+export const createStrategy = (strategyData) => {
+    return apiClient.post('/strategies', strategyData); // Sửa API thành apiClient
+};
+
+// Lấy chiến thuật nâng cao của user cụ thể
+export const getMyStrategies = (userId) => {
+    return apiClient.get(`/strategies/my/${userId}`); // Sửa API thành apiClient
+};
+
+// Xóa chiến thuật nâng cao
+export const deleteStrategy = (id) => {
+    return apiClient.delete(`/strategies/${id}`); // Sửa API thành apiClient
+};
 
 export default apiClient;

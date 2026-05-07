@@ -1,3 +1,52 @@
-Lựa chọn A (Làm sạch Giai đoạn 3): Xử lý nốt các nút Thêm/Xóa/Sửa ở Admin Dashboard và làm Tab "Quản lý Kèo Đấu" cho Admin.
 
-Lựa chọn B (Tiến thẳng tới Giai đoạn 4 & 5): Làm User Dashboard cho phép User tự tạo kèo, sau đó nâng cấp thuật toán hiển thị Draft Mode với "Nút gạt 3 nấc".
+### I. THIẾT KẾ GIẢI PHÁP: "HỆ THỐNG CHIẾN THUẬT PHÂN LỚP"
+
+#### 1. Backend: Cấu trúc Cơ sở dữ liệu (Model)
+Chúng ta sẽ tạo một Model mới mang tên `Strategy` để lưu trữ cả 3 loại hình bạn yêu cầu.
+
+* **File: `backend/src/models/Strategy.js`**
+    * `type`: Loại chiến thuật (`skill_matchup`, `synergy`, `combo_counter`).
+    * `teamA` (Array): Danh sách tướng phe ta (hoặc tướng chính trong kèo kỹ năng).
+    * `teamB` (Array): Danh sách tướng phe địch (để trống nếu là `synergy`).
+    * `note`: Phân tích chi tiết cách vận hành/khắc chế.
+    * `counterItems`: Trang bị khuyên dùng cho cả combo.
+    * `author`, `isSystem`: Tương tự như Matchup để phân loại nguồn.
+
+#### 2. Logic xử lý (Controller)
+Backend sẽ có thêm hàm `getStrategyRecommendations` để xử lý các bài toán sau:
+* **Gợi ý phối hợp:** Khi nhận `allyIds`, tìm các `Strategy` loại `synergy` mà `teamA` chứa các tướng phe ta đang chọn.
+* **Nhận diện Combo địch:** Khi nhận `enemyIds`, kiểm tra xem chúng có khớp với `teamA` của bất kỳ `Strategy` loại `synergy` nào không.
+* **Gợi ý Đối trọng:** Nếu phát hiện địch có combo, tìm `Strategy` loại `combo_counter` có `teamB` là combo đó để gợi ý `teamA` cho phe ta.
+
+---
+
+### II. TIẾN ĐỘ CHỈNH SỬA (ROADMAP)
+
+Tôi chia làm 3 giai đoạn để bạn dễ dàng kiểm soát:
+
+#### Giai đoạn 1: Xây dựng "Kho vũ khí" (Backend & API)
+Đây là bước đặt nền móng, đảm bảo dữ liệu được lưu trữ đúng cấu trúc mảng tướng.
+1.  Tạo Model `Strategy.js`.
+2.  Viết `strategyController.js` với các hàm CRUD và logic truy vấn mảng tướng phức tạp.
+3.  Tạo các Route tương ứng và đăng ký vào `server.js`.
+4.  Cập nhật `api.js` ở Frontend để sẵn sàng gọi dữ liệu mới.
+
+#### Giai đoạn 2: Trang bị giao diện quản lý (Admin/User Dashboard)
+Tạo công cụ để bạn và người dùng nạp dữ liệu chiến thuật vào hệ thống.
+1.  Tạo trang `ManageStrategies.jsx` (dùng chung cho cả Admin và User).
+2.  Thiết kế lại `HeroSelect` để hỗ trợ chọn nhiều tướng cho một Combo (dạng `[Slot] + [Slot]`).
+3.  Tích hợp logic chọn loại chiến thuật (Kèo kỹ năng / Kết hợp / Đội hình) để thay đổi UI form linh hoạt.
+
+#### Giai đoạn 3: Tỏa sáng tại "Bàn cờ cấm chọn" (DraftMode Integration)
+Đây là giai đoạn quan trọng nhất, tích hợp các section gợi ý vào DraftMode.
+1.  **Section 1: Phối hợp đồng đội:** Khi Team Ta vừa pick 1 tướng, hiện danh sách các tướng tạo Synergy tốt nhất từ database.
+2.  **Section 2: Cảnh báo Combo Địch:** Tự động phát hiện nếu 2-3 tướng địch vừa chọn nằm trong một combo mạnh đã biết.
+3.  **Section 3: Chiến thuật Đối trọng:** Đề xuất đội hình phe ta để "phá giải" combo địch vừa nhận diện được.
+
+---
+
+### III. TRƯỜNG HỢP SỬ DỤNG (USE CASE) THỰC TẾ
+
+1.  **Kèo Kỹ Năng:** Admin tạo kèo Florentino vs Yena (Skill Matchup). Khi User dùng SoloCounter tra cứu Florentino, hệ thống sẽ hiện thêm một ô: *"Kèo kỹ năng: Yena (Ai múa gắt hơn người đó thắng)"*.
+2.  **Gợi ý Phối hợp:** Trong DraftMode, bạn chọn Zata. Hệ thống lập tức gợi ý: *"Hãy chọn thêm Dolia (Synergy) để Zata có thể bay 2 lần liên tục"*.
+3.  **Đối trọng Đội hình:** Địch chọn Toro + Aya. Hệ thống nhận diện đây là combo "Xe tăng bất tử" và gợi ý: *"Địch có combo Toro+Aya, hãy chọn Hayate hoặc Maloch (Combo Counter) để gây sát thương chuẩn"*.

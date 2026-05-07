@@ -1417,3 +1417,266 @@
     .cyber-score-bar { flex-wrap: wrap; justify-content: center; }
     .form-bottom-row { flex-direction: column; }
 }
+
+/* =========================================
+   GIAO DIỆN QUẢN LÝ CHIẾN THUẬT (STRATEGY)
+========================================= */
+.strategy-type-selector {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 20px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.btn-strat-type {
+    background: rgba(15, 23, 42, 0.5);
+    border: 1px solid #334155;
+    color: #94a3b8;
+    padding: 12px 25px;
+    border-radius: 8px;
+    font-family: 'Oswald', sans-serif;
+    font-size: 15px;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+.btn-strat-type:hover {
+    background: rgba(56, 189, 248, 0.1);
+    color: #38bdf8;
+    border-color: #38bdf8;
+}
+
+.btn-strat-type.active {
+    background: rgba(56, 189, 248, 0.2);
+    border-color: #38bdf8;
+    color: #38bdf8;
+    box-shadow: 0 0 15px rgba(56, 189, 248, 0.3);
+}
+
+.combo-slots-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    justify-content: center;
+    background: rgba(0,0,0,0.3);
+    padding: 20px;
+    border-radius: 12px;
+    border: 1px dashed #475569;
+    width: 100%;
+}
+
+.combo-slot-item {
+    display: flex;
+    align-items: center;
+    position: relative;
+}
+
+.combo-plus-icon {
+    font-size: 24px;
+    font-weight: 900;
+    color: #64748b;
+    margin: 0 10px;
+}
+
+.btn-remove-slot {
+    position: absolute;
+    top: -10px;
+    right: 35px; /* Lệch sang trái để tránh bị dấu cộng đè lên */
+    background: #ef4444;
+    color: white;
+    border: 2px solid #0f172a;
+    border-radius: 50%;
+    width: 26px; height: 26px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: bold;
+    z-index: 10;
+    display: flex; justify-content: center; align-items: center;
+}
+
+.combo-slot-item:last-child .btn-remove-slot {
+    right: -10px; /* Thẻ cuối cùng không có dấu cộng nên kéo ra góc */
+}
+
+.btn-add-combo-slot {
+    background: #1e293b;
+    border: 1px dashed #64748b;
+    color: #64748b;
+    border-radius: 12px;
+    width: 80px;
+    height: 120px; /* Bằng chiều cao của Slot Hero */
+    cursor: pointer;
+    font-family: 'Oswald', sans-serif;
+    font-size: 14px;
+    transition: 0.3s;
+    display: flex; flex-direction: column; justify-content: center; align-items: center;
+}
+
+.btn-add-combo-slot span {
+    font-size: 24px;
+}
+
+.btn-add-combo-slot:hover {
+    border-color: #10b981; 
+    color: #10b981; 
+    background: rgba(16, 185, 129, 0.1);
+}
+
+/* THẺ HIỂN THỊ DỮ LIỆU ĐÃ LƯU */
+.strategy-cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 20px;
+}
+
+.strategy-card {
+    background: rgba(15, 23, 42, 0.8);
+    border-radius: 12px;
+    padding: 20px;
+    border: 1px solid #334155;
+    position: relative;
+    overflow: hidden;
+}
+
+.strat-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.strat-type-badge {
+    background: #0f172a;
+    color: #38bdf8;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: bold;
+    letter-spacing: 1px;
+    font-family: 'Oswald', sans-serif;
+    border: 1px solid #38bdf8;
+}
+
+.strat-teams {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 15px;
+    background: #0b0f19;
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 15px;
+    border: 1px solid rgba(255,255,255,0.05);
+}
+
+.team-display {
+    display: flex;
+    gap: -12px; /* Hiệu ứng thẻ đè lên nhau */
+}
+
+/* =========================================
+   GIAO DIỆN HIỂN THỊ TEAM (CHỒNG LÊN NHAU + HOVER HIỆN TÊN)
+========================================= */
+.team-display {
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding-bottom: 5px; /* Tạo chút không gian bên dưới cho tên hiện lên */
+}
+
+/* Thẻ bọc cả ảnh và tên */
+.strat-hero-icon-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-left: -15px; /* HIỆU ỨNG CHỒNG LÊN NHAU */
+    transition: 0.3s ease;
+    position: relative;
+}
+
+.strat-hero-icon-wrap:first-child {
+    margin-left: 0; /* Ảnh đầu tiên không bị lùi */
+}
+
+/* Định dạng Ảnh */
+.strat-hero-icon-wrap img {
+    width: 45px;
+    height: 45px;
+    border-radius: 50%;
+    border: 2px solid #0b0f19;
+    object-fit: cover;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.5);
+    transition: 0.3s ease;
+}
+
+/* Định dạng Tên (Ban đầu ẩn đi) */
+.strat-hero-name {
+    font-size: 10px;
+    font-weight: bold;
+    color: #fff;
+    text-transform: uppercase;
+    white-space: nowrap;
+    background: rgba(15, 23, 42, 0.95); /* Nền tối làm nổi bật chữ */
+    border: 1px solid #38bdf8;
+    padding: 3px 8px;
+    border-radius: 4px;
+    position: absolute;
+    bottom: -22px; /* Đẩy xuống bên dưới ảnh */
+    opacity: 0; /* Ẩn đi */
+    visibility: hidden;
+    transform: translateY(-5px);
+    transition: 0.2s ease;
+    z-index: 20;
+    pointer-events: none; /* Không cản trở rê chuột */
+    box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+}
+
+/* Hiệu ứng khi rê chuột (Hover) */
+.strat-hero-icon-wrap:hover {
+    transform: translateY(-6px); /* Nẩy ảnh lên */
+    z-index: 10; /* Ưu tiên nổi lên trên cùng */
+}
+
+.strat-hero-icon-wrap:hover .strat-hero-name {
+    opacity: 1; /* Hiện tên */
+    visibility: visible;
+    transform: translateY(0); /* Rớt nhẹ xuống mượt mà */
+}
+
+/* Màu viền theo phe */
+.enemy-team .strat-hero-icon-wrap img { border-color: #ef4444; }
+.ally-team .strat-hero-icon-wrap img { border-color: #10b981; }
+
+.strat-vs-icon {
+    font-family: 'Oswald', sans-serif;
+    font-size: 16px;
+    color: #94a3b8;
+    font-weight: 900;
+}
+
+.strat-note {
+    font-size: 13px;
+    color: #cbd5e1;
+    font-style: italic;
+    background: rgba(255,255,255,0.02);
+    padding: 12px;
+    border-radius: 6px;
+    margin-bottom: 15px;
+    border-left: 3px solid #38bdf8;
+}
+
+.strat-footer {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    color: #94a3b8;
+    text-transform: uppercase;
+}
+
+.strat-author { 
+    color: #f59e0b; 
+    font-weight: bold; 
+}
