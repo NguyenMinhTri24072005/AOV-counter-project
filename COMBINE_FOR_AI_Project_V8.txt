@@ -35,6 +35,7 @@ CẤU TRÚC THƯ MỤC DỰ ÁN
 │   │   │   ├── roleRoutes.js
 │   │   │   └── uploadRoutes.js
 │   │   └── server.js
+├── COMBINE_FOR_AI_Project.txt
 ├── frontend/
 │   ├── .gitignore
 │   ├── eslint.config.js
@@ -741,13 +742,13 @@ module.exports = { createItem, getAllItems, updateItem, deleteItem };
 
 const Matchup = require('../models/Matchup')
 
-const createMatchup = async (req,res) => {
+const createMatchup = async (req, res) => {
     try {
         const newMatchup = new Matchup(req.body);
         const savedMatchup = await newMatchup.save();
         res.status(201).json(savedMatchup)
-    } catch (errror){
-        res.status(500).json({message: 'lỗi khi tạo kèo đấu: ' + error.message})
+    } catch (errror) {
+        res.status(500).json({ message: 'lỗi khi tạo kèo đấu: ' + error.message })
     }
 }
 
@@ -755,10 +756,10 @@ const createMatchup = async (req,res) => {
 const getRecommendations = async (req, res) => {
     try {
         const { enemyIds, excludedIds = [], mode = 'standard', userId = null } = req.body;
-        
+
         // 1. Xây dựng bộ lọc Author dựa trên Mode
         let authorFilter = {};
-        
+
         // Giả sử bạn lấy được Admin ID từ DB hoặc Hardcode. 
         // Cách tốt nhất là tìm User có role 'admin'
         const Admin = await require('../models/User').findOne({ role: 'admin' });
@@ -773,13 +774,13 @@ const getRecommendations = async (req, res) => {
         }
 
         // 2. Tìm kèo với bộ lọc mở rộng
-        const matchups = await Matchup.find({ 
+        const matchups = await Matchup.find({
             enemyHeroId: { $in: enemyIds },
-            ...authorFilter 
+            ...authorFilter
         })
-        .populate('counterHeroId', 'name avatar role')
-        .populate('counterItems', 'name avatar passive')
-        .populate('author', 'username role'); // Thêm thông tin tác giả
+            .populate('counterHeroId', 'name avatar role')
+            .populate('counterItems', 'name avatar passive')
+            .populate('author', 'username role'); // Thêm thông tin tác giả
 
         const counterMap = {};
 
@@ -798,12 +799,14 @@ const getRecommendations = async (req, res) => {
 
             counterMap[counterId].totalScore += match.score;
             match.counterItems.forEach(item => counterMap[counterId].recommendedItems.add(item));
-            
+
+            // Tìm đoạn code này (khoảng dòng 259 trong file kết hợp)
             counterMap[counterId].matchupDetails.push({
                 enemyId: match.enemyHeroId,
                 score: match.score,
                 note: match.note,
-                authorName: match.author.username, // Hiển thị ai là người khuyên kèo này
+                authorName: match.author.username,
+                authorId: match.author._id, // THÊM DÒNG NÀY ĐỂ FRONTEND CÓ THỂ LỌC
                 isSystem: match.author.role === 'admin'
             });
         });
@@ -832,7 +835,7 @@ const deleteMatchup = async (req, res) => {
     } catch (error) { res.status(500).json({ message: error.message }); }
 };
 
-module.exports = {createMatchup, getRecommendations, getMyMatchups, deleteMatchup };
+module.exports = { createMatchup, getRecommendations, getMyMatchups, deleteMatchup };
 
 --- KẾT THÚC FILE: backend/src/controllers/matchupController.js ---
 
@@ -1487,145 +1490,249 @@ body {
 
 --- BẮT ĐẦU FILE: frontend/src/components/DraftMode.css ---
 
-/* BÀN CỜ DRAFT (2 CỘT) */
+/* BÀN CỜ DRAFT (2 CỘT) [cite: 916] */
 .draft-board-split {
     display: flex;
     gap: 30px;
     margin-bottom: 30px;
 }
 
-@media (max-width: 768px) { .draft-board-split { flex-direction: column; } }
+@media (max-width: 768px) {
+    .draft-board-split {
+        flex-direction: column;
+    }
+}
 
 .team-col {
     flex: 1;
-    background-color: rgba(15, 23, 42, 0.6); /* Nền kính tối */
+    background-color: rgba(15, 23, 42, 0.6);
     backdrop-filter: blur(10px);
-    border: 1px solid rgba(255,255,255,0.05);
+    border: 1px solid rgba(255, 255, 255, 0.05);
     border-radius: 12px;
     padding: 20px;
 }
 
-.ally-col { border-top: 4px solid #3b82f6; box-shadow: 0 10px 30px rgba(59, 130, 246, 0.1); }
-.enemy-col { border-top: 4px solid #ef4444; box-shadow: 0 10px 30px rgba(239, 68, 68, 0.1); }
+.ally-col {
+    border-top: 4px solid #3b82f6;
+    box-shadow: 0 10px 30px rgba(59, 130, 246, 0.1);
+}
+
+.enemy-col {
+    border-top: 4px solid #ef4444;
+    box-shadow: 0 10px 30px rgba(239, 68, 68, 0.1);
+}
 
 .col-title {
-    text-align: center; margin-top: 0; font-weight: 800;
-    font-size: 24px; letter-spacing: 2px; text-transform: uppercase;
+    text-align: center;
+    margin-top: 0;
+    font-weight: 800;
+    font-size: 24px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    font-family: 'Oswald';
 }
-.ally-title { color: #60a5fa; text-shadow: 0 0 10px rgba(96, 165, 250, 0.5); }
-.enemy-title { color: #f87171; text-shadow: 0 0 10px rgba(248, 113, 113, 0.5); }
 
-.bans-row h4, .picks-row h4 {
-    margin: 0 0 10px 0; color: #94a3b8; font-size: 15px; letter-spacing: 1px; text-transform: uppercase;
+.ally-title {
+    color: #60a5fa;
+    text-shadow: 0 0 10px rgba(96, 165, 250, 0.5);
 }
 
-.slots-container { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px; }
+.enemy-title {
+    color: #f87171;
+    text-shadow: 0 0 10px rgba(248, 113, 113, 0.5);
+}
 
-/* THIẾT KẾ SLOT BOX (Ô TƯỚNG) */
+.bans-row h4,
+.picks-row h4 {
+    margin: 0 0 10px 0;
+    color: #94a3b8;
+    font-size: 15px;
+    text-transform: uppercase;
+}
+
+.slots-container {
+    display: flex;
+    gap: 15px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+}
+
+/* THIẾT KẾ SLOT BOX (KHÔNG ĐƯỢC CÓ OVERFLOW HIDDEN ĐỂ NỔI NÚT X) [cite: 925] */
 .slot-box {
-    display: flex; align-items: center; justify-content: center;
-    position: relative; border-radius: 6px; font-weight: 700;
-    transition: all 0.2s ease; overflow: hidden;
+    position: relative;
+    border-radius: 8px;
+    cursor: pointer;
+    background-color: rgba(30, 41, 59, 0.5);
+    overflow: visible;
+    /* QUAN TRỌNG: Cho phép nút X tràn ra ngoài */
+    transition: 0.2s;
+}
+
+/* Kích thước VUÔNG CHUẨN  */
+.slot-box.banAlly,
+.slot-box.banEnemy {
+    width: 65px;
+    height: 65px;
+}
+
+.slot-box.pickAlly,
+.slot-box.pickEnemy {
+    width: 95px;
+    height: 95px;
 }
 
 .slot-box.empty {
-    background-color: rgba(30, 41, 59, 0.5) !important;
-    border: 2px dashed #475569 !important;
+    border: 2px dashed #475569;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .slot-box.empty:hover {
-    border-color: #38bdf8 !important;
-    background-color: rgba(56, 189, 248, 0.1) !important;
-    box-shadow: 0 0 15px rgba(56, 189, 248, 0.3);
+    border-color: #38bdf8;
+    background-color: rgba(56, 189, 248, 0.1);
 }
 
-.slot-box.empty span { color: #64748b !important; }
-.slot-box.empty:hover span { color: #38bdf8 !important; text-shadow: 0 0 10px #38bdf8; }
-
-.slot-box.filled { border: 2px solid transparent; }
-.slot-box.filled::before {
-    content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0;
-    background: linear-gradient(to top, rgba(0,0,0,0.9), transparent); z-index: 1;
+.plus-icon {
+    font-size: 28px;
+    color: #64748b;
+    font-weight: bold;
 }
 
-/* Kích thước */
-.slot-box.banAlly, .slot-box.banEnemy { width: 80px; height: 35px; font-size: 12px; }
-.slot-box.pickAlly, .slot-box.pickEnemy { width: 110px; height: 50px; }
-
-/* Màu phân biệt */
-.ally-col .slot-box.filled { border-color: #3b82f6; box-shadow: 0 0 10px rgba(59, 130, 246, 0.3); }
-.enemy-col .slot-box.filled { border-color: #ef4444; box-shadow: 0 0 10px rgba(239, 68, 68, 0.3); }
-.bans .slot-box.filled { filter: grayscale(100%); border-color: #64748b; box-shadow: none; opacity: 0.6; }
-
-/* HIỆU ỨNG VIỀN KHẮC CHẾ (TRONG DRAFT MODE) */
-.slot-box.border-green {
-    border: 3px solid #10b981 !important;
-    box-shadow: 0 0 15px rgba(16, 185, 129, 0.8) !important;
-}
-.slot-box.border-red {
-    border: 3px solid #f43f5e !important;
-    box-shadow: 0 0 15px rgba(244, 63, 94, 0.8) !important;
+/* Wrapper chứa ảnh có bo góc riêng biệt [cite: 931] */
+.slot-image-container {
+    width: 100%;
+    height: 100%;
+    border-radius: 8px;
+    overflow: hidden;
+    background: #000;
+    border: 2px solid #334155;
+    position: relative;
+    z-index: 1;
 }
 
-.hero-name { font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px; }
+.slot-img-bg {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    /* CHỐNG MÉO ẢNH */
+    display: block;
+    opacity: 0.9;
+}
 
-/* Nút xóa */
+.slot-name-overlay {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: rgba(0, 0, 0, 0.85);
+    padding: 5px 2px;
+    text-align: center;
+}
+
+.hero-name {
+    color: #fff;
+    font-size: 10px;
+    text-transform: uppercase;
+    font-weight: 700;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: block;
+}
+
+/* NÚT XÓA FIX TRIỆT ĐỂ: NẰM NGOÀI ĐƯỜNG BO CỦA ẢNH  */
 .remove-btn {
-    position: absolute; top: 2px; right: 2px;
-    width: 18px; height: 18px; border-radius: 4px;
-    background-color: rgba(0,0,0,0.6); color: #fff;
-    border: 1px solid rgba(255,255,255,0.2); cursor: pointer;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 12px; transition: all 0.2s;
+    position: absolute;
+    top: -10px;
+    right: -10px;
+    /* Đẩy hẳn ra ngoài khung */
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: #ef4444;
+    color: #fff;
+    border: 2px solid #fff;
+    font-weight: bold;
+    cursor: pointer;
+    z-index: 100;
+    /* LUÔN TRÊN CÙNG */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+    transition: 0.2s;
 }
-.remove-btn:hover { background-color: #ef4444; border-color: #ef4444; box-shadow: 0 0 8px #ef4444; }
 
-/* ================= BẢNG PHÂN TÍCH ================= */
-.analysis-container { display: flex; flex-direction: column; gap: 20px; }
+.remove-btn:hover {
+    background: #ff0000;
+    transform: scale(1.15);
+}
+
+.border-green .slot-image-container {
+    border-color: #10b981 !important;
+    box-shadow: 0 0 15px #10b981;
+}
+
+.border-red .slot-image-container {
+    border-color: #f43f5e !important;
+    box-shadow: 0 0 15px #f43f5e;
+}
+
+/* BẢNG PHÂN TÍCH [cite: 940, 941] */
+.analysis-container {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
 
 .analysis-board {
-    background-color: rgba(15, 23, 42, 0.8);
-    backdrop-filter: blur(10px);
-    padding: 25px; border-radius: 12px;
-    border: 1px solid rgba(255,255,255,0.05);
+    background: rgba(15, 23, 42, 0.8);
+    padding: 25px;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
-.board-recommend { border-left: 4px solid #10b981; }
-.board-threat { border-left: 4px solid #ef4444; }
+.board-recommend {
+    border-left: 5px solid #10b981;
+}
+
+.board-threat {
+    border-left: 5px solid #ef4444;
+}
 
 .analysis-board h2 {
-    margin-top: 0; font-size: 20px; text-transform: uppercase; letter-spacing: 1px;
+    margin-top: 0;
+    font-size: 20px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-family: 'Oswald';
 }
-.board-recommend h2 { color: #10b981; text-shadow: 0 0 10px rgba(16, 185, 129, 0.3); }
-.board-threat h2 { color: #ef4444; text-shadow: 0 0 10px rgba(239, 68, 68, 0.3); }
 
-.recommendation-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
+.recommendation-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 20px;
+}
 
 .rec-card {
     background: rgba(30, 41, 59, 0.5);
-    border: 1px solid #334155; border-radius: 8px;
-    overflow: hidden;
-}
-
-.rec-header {
-    padding: 10px 15px; border-bottom: 1px solid #334155;
-    display: flex; justify-content: space-between; align-items: center;
-    font-size: 16px; font-weight: 700; letter-spacing: 1px;
+    border: 1px solid #334155;
+    border-radius: 8px;
+    padding: 15px;
 }
 
 .score-badge {
-    background-color: rgba(245, 158, 11, 0.2); color: #fcd34d;
-    border: 1px solid #f59e0b; padding: 3px 8px; border-radius: 4px; font-size: 12px;
-}
-.threat-badge {
-    background-color: rgba(239, 68, 68, 0.2) !important; color: #fca5a5 !important;
-    border-color: #ef4444 !important;
+    float: right;
+    background: #f59e0b;
+    color: #000;
+    padding: 2px 10px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: bold;
 }
 
-.rec-body { padding: 15px; font-family: sans-serif; }
-.rec-details-list { margin: 0; padding-left: 20px; font-size: 14px; color: #cbd5e1; }
-.rec-note { font-style: italic; color: #94a3b8; font-size: 13px; margin-top: 4px; background: rgba(0,0,0,0.2); padding: 6px; border-radius: 4px; border-left: 2px solid #64748b; }
-.threat-card .rec-note { border-left-color: #ef4444; }
+
 
 --- KẾT THÚC FILE: frontend/src/components/DraftMode.css ---
 
