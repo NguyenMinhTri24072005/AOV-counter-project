@@ -7,7 +7,7 @@ const getAvatarUrl = (url) => {
     return `http://localhost:5000${url}`;
 };
 
-const LANE_OPTIONS = ['Top', 'Jungle', 'Mid', 'ADC', 'Support'];
+const LANE_OPTIONS = ['Top', 'Jungle', 'Mid', 'AD', 'Support'];
 
 const SKILL_LABELS = {
     passive: 'Nội tại',

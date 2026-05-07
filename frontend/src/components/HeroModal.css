@@ -1,91 +1,159 @@
 /* OVERLAY & CONTAINER */
 .hero-modal-overlay {
-    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-    background: rgba(4, 7, 12, 0.9); /* Tối hơn để nổi bật popup */
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(4, 7, 12, 0.9);
+    /* Tối hơn để nổi bật popup */
     backdrop-filter: blur(8px);
-    display: flex; justify-content: center; align-items: center; z-index: 9999;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
 }
 
 .hero-modal-content {
-    background: #0f172a; 
+    background: #0f172a;
     border: 1px solid rgba(56, 189, 248, 0.3);
     border-radius: 16px;
-    width: 90%; max-width: 850px; /* Rộng hơn một chút */
-    height: 80vh; 
-    display: flex; flex-direction: column; overflow: hidden;
+    width: 90%;
+    max-width: 850px;
+    /* Rộng hơn một chút */
+    height: 80vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
     box-shadow: 0 0 50px rgba(0, 0, 0, 0.8), 0 0 20px rgba(56, 189, 248, 0.1);
 }
 
 /* HEADER */
 .hero-modal-header {
-    display: flex; justify-content: space-between; align-items: center;
-    padding: 20px 30px; background: #0b0f19; 
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 30px;
+    background: #0b0f19;
     border-bottom: 2px solid rgba(56, 189, 248, 0.2);
 }
-.hero-modal-header h3 { 
-    margin: 0; font-size: 22px; color: #fff; 
-    font-family: 'Oswald', sans-serif; letter-spacing: 3px;
+
+.hero-modal-header h3 {
+    margin: 0;
+    font-size: 22px;
+    color: #fff;
+    font-family: 'Oswald', sans-serif;
+    letter-spacing: 3px;
     text-shadow: 0 0 10px rgba(56, 189, 248, 0.5);
 }
+
 .btn-close-modal {
-    background: transparent; border: none; color: #64748b;
-    font-size: 32px; cursor: pointer; transition: 0.2s;
+    background: transparent;
+    border: none;
+    color: #64748b;
+    font-size: 32px;
+    cursor: pointer;
+    transition: 0.2s;
 }
-.btn-close-modal:hover { color: #f43f5e; transform: rotate(90deg); }
+
+.btn-close-modal:hover {
+    color: #f43f5e;
+    transform: rotate(90deg);
+}
 
 /* FILTERS */
 .hero-modal-filters {
-    display: flex; gap: 15px; padding: 20px 30px;
-    background: rgba(15, 23, 42, 0.5); border-bottom: 1px solid rgba(255,255,255,0.05);
+    display: flex;
+    gap: 15px;
+    padding: 20px 30px;
+    background: rgba(15, 23, 42, 0.5);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
-.hero-modal-filters input, .hero-modal-filters select {
-    background: #1e293b; border: 1px solid #334155; color: #fff;
-    padding: 12px; border-radius: 8px; outline: none;
-    font-family: 'Oswald', sans-serif; font-weight: 500; font-size: 14px;
+
+.hero-modal-filters input,
+.hero-modal-filters select {
+    background: #1e293b;
+    border: 1px solid #334155;
+    color: #fff;
+    padding: 12px;
+    border-radius: 8px;
+    outline: none;
+    font-family: 'Oswald', sans-serif;
+    font-weight: 500;
+    font-size: 14px;
 }
-.hero-modal-filters input:focus { border-color: #38bdf8; box-shadow: 0 0 10px rgba(56, 189, 248, 0.2); }
+
+.hero-modal-filters input:focus {
+    border-color: #38bdf8;
+    box-shadow: 0 0 10px rgba(56, 189, 248, 0.2);
+}
 
 /* GRID FIX (FIX LỖI CHE ẢNH) */
 .hero-modal-grid {
-    padding: 30px; flex: 1; overflow-y: auto;
-    display: grid; 
-    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); /* Cột rộng hơn */
-    gap: 20px; align-content: start;
+    padding: 30px;
+    flex: 1;
+    overflow-y: auto;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+    /* Cột rộng hơn */
+    gap: 20px;
+    align-content: start;
 }
 
 /* CUSTOM SCROLLBAR */
-.hero-modal-grid::-webkit-scrollbar { width: 6px; }
-.hero-modal-grid::-webkit-scrollbar-track { background: transparent; }
-.hero-modal-grid::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
+.hero-modal-grid::-webkit-scrollbar {
+    width: 6px;
+}
+
+.hero-modal-grid::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.hero-modal-grid::-webkit-scrollbar-thumb {
+    background: #334155;
+    border-radius: 10px;
+}
 
 /* HERO CARD ESPORT STYLE */
 .hero-selection-card {
-    display: flex; flex-direction: column; align-items: center;
-    cursor: pointer; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     position: relative;
 }
 
 .avatar-wrapper {
-    width: 80px; height: 80px; /* Cố định kích thước khung chứa */
+    width: 80px;
+    height: 80px;
+    /* Cố định kích thước khung chứa */
     border-radius: 50%;
-    padding: 3px; /* Tạo khoảng hở cho viền sáng */
+    padding: 3px;
+    /* Tạo khoảng hở cho viền sáng */
     border: 2px solid #334155;
     background: #1e293b;
     transition: all 0.3s;
     margin-bottom: 10px;
-    overflow: hidden; /* Đảm bảo ảnh không tràn ra ngoài bo tròn */
+    overflow: hidden;
+    /* Đảm bảo ảnh không tràn ra ngoài bo tròn */
 }
 
 .hero-selection-img {
-    width: 100%; height: 100%;
-    object-fit: cover; /* Giữ tỉ lệ ảnh chuẩn */
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    /* Giữ tỉ lệ ảnh chuẩn */
     border-radius: 50%;
     transition: transform 0.5s;
 }
 
 .hero-selection-name {
-    font-size: 14px; font-weight: 700; color: #94a3b8;
-    text-transform: uppercase; letter-spacing: 1px;
+    font-size: 14px;
+    font-weight: 700;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 1px;
     font-family: 'Oswald', sans-serif;
     text-align: center;
 }
@@ -98,7 +166,8 @@
 }
 
 .hero-selection-card:hover .hero-selection-img {
-    transform: scale(1.1); /* Zoom nhẹ ảnh khi di chuột */
+    transform: scale(1.1);
+    /* Zoom nhẹ ảnh khi di chuột */
 }
 
 .hero-selection-card:hover .hero-selection-name {
@@ -107,6 +176,9 @@
 }
 
 .no-heroes-found {
-    grid-column: 1 / -1; text-align: center; 
-    padding: 50px; color: #64748b; font-size: 18px;
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 50px;
+    color: #64748b;
+    font-size: 18px;
 }

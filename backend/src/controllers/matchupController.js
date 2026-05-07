@@ -5,43 +5,43 @@ const createMatchup = async (req, res) => {
         const newMatchup = new Matchup(req.body);
         const savedMatchup = await newMatchup.save();
         res.status(201).json(savedMatchup)
-    } catch (errror) {
-        res.status(500).json({ message: 'lỗi khi tạo kèo đấu: ' + error.message })
+    } catch (error) {
+        res.status(500).json({ message: 'Lỗi khi tạo kèo đấu: ' + error.message })
     }
 }
 
-
 const getRecommendations = async (req, res) => {
     try {
-        const { enemyIds, excludedIds = [], mode = 'standard', userId = null } = req.body;
+        const { enemyIds = [], excludedIds = [], mode = 'standard', userId = null } = req.body;
+        
+        // 1. Khởi tạo Object query rỗng
+        let query = {};
 
-        // 1. Xây dựng bộ lọc Author dựa trên Mode
-        let authorFilter = {};
-
-        // Giả sử bạn lấy được Admin ID từ DB hoặc Hardcode. 
-        // Cách tốt nhất là tìm User có role 'admin'
+        // 2. Xây dựng bộ lọc Author dựa trên Mode
         const Admin = await require('../models/User').findOne({ role: 'admin' });
         const adminId = Admin?._id;
 
         if (mode === 'standard') {
-            authorFilter = { author: adminId };
+            query.author = adminId;
         } else if (mode === 'custom') {
-            authorFilter = { author: userId };
+            query.author = userId;
         } else if (mode === 'compare') {
-            authorFilter = { author: { $in: [adminId, userId] } };
+            query.author = { $in: [adminId, userId] };
+        }
+        // Nếu mode là 'pro', chúng ta không đặt query.author để lấy TOÀN BỘ kèo.
+
+        // 3. FIX LỖI TẠI ĐÂY: Chỉ lọc theo enemyHeroId nếu mảng enemyIds thực sự có phần tử
+        if (enemyIds && enemyIds.length > 0) {
+            query.enemyHeroId = { $in: enemyIds };
         }
 
-        // 2. Tìm kèo với bộ lọc mở rộng
-        const matchups = await Matchup.find({
-            enemyHeroId: { $in: enemyIds },
-            ...authorFilter
-        })
+        // 4. Tìm kèo với bộ lọc đã được xử lý chuẩn
+        const matchups = await Matchup.find(query)
             .populate('counterHeroId', 'name avatar role')
-            .populate('counterItems', 'name avatar passive')
-            .populate('author', 'username role'); // Thêm thông tin tác giả
+            .populate('counterItems', 'name icon passive')
+            .populate('author', 'username role');
 
         const counterMap = {};
-
         matchups.forEach(match => {
             const counterId = match.counterHeroId._id.toString();
             if (excludedIds.includes(counterId)) return;
@@ -58,22 +58,22 @@ const getRecommendations = async (req, res) => {
             counterMap[counterId].totalScore += match.score;
             match.counterItems.forEach(item => counterMap[counterId].recommendedItems.add(item));
 
-            // Tìm đoạn code này (khoảng dòng 259 trong file kết hợp)
+            // Gom nhóm chi tiết các tướng bị khắc chế
             counterMap[counterId].matchupDetails.push({
-                _id: match._id,
+                _id: match._id, // Quan trọng: Truyền _id để Frontend có thể gọi lệnh Xóa
                 enemyId: match.enemyHeroId,
                 score: match.score,
                 note: match.note,
-                authorName: match.author.username,
-                authorId: match.author._id, // THÊM DÒNG NÀY ĐỂ FRONTEND CÓ THỂ LỌC
-                isSystem: match.author.role === 'admin'
+                authorName: match.author?.username,
+                authorId: match.author?._id,
+                isSystem: match.author?.role === 'admin'
             });
         });
 
         const sortedCounters = Object.values(counterMap)
             .map(c => ({ ...c, recommendedItems: Array.from(c.recommendedItems) }))
             .sort((a, b) => b.totalScore - a.totalScore);
-
+            
         res.status(200).json(sortedCounters);
     } catch (error) {
         res.status(500).json({ message: 'Lỗi xử lý: ' + error.message });

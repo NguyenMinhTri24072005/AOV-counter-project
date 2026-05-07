@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import './HeroModal.css'; // Tận dụng style của HeroModal
+import './ItemModal.css';
 
 const getImgUrl = (url) => {
     if (!url) return 'https://placehold.co/60x60?text=Item';
@@ -12,15 +12,6 @@ const ItemModal = ({ isOpen, onClose, items, selectedItems, onToggle }) => {
     const [categoryFilter, setCategoryFilter] = useState('');
     const [detailItem, setDetailItem] = useState(null);
 
-    // Lấy danh sách các loại trang bị duy nhất
-    const allCategories = useMemo(() => {
-        const cats = new Set();
-        items.forEach(i => {
-            if (i.category?.name) cats.add(i.category.name);
-        });
-        return Array.from(cats);
-    }, [items]);
-
     useEffect(() => {
         if (isOpen) {
             setSearchTerm('');
@@ -28,6 +19,12 @@ const ItemModal = ({ isOpen, onClose, items, selectedItems, onToggle }) => {
             setDetailItem(null);
         }
     }, [isOpen]);
+
+    const categories = useMemo(() => {
+        const cats = new Set();
+        items.forEach(i => i.category?.name && cats.add(i.category.name));
+        return Array.from(cats);
+    }, [items]);
 
     const filteredItems = useMemo(() => {
         return items.filter(item => {
@@ -40,63 +37,61 @@ const ItemModal = ({ isOpen, onClose, items, selectedItems, onToggle }) => {
     if (!isOpen) return null;
 
     return (
-        <div className="hero-modal-overlay" onClick={onClose}>
-            <div className="hero-modal-content" onClick={e => e.stopPropagation()}>
-                <div className="hero-modal-header">
-                    <h3>KHO TRANG BỊ CHIẾN THUẬT</h3>
-                    <button className="btn-close-modal" onClick={onClose}>&times;</button>
+        <div className="item-modal-overlay" onClick={onClose}>
+            <div className="item-modal-content" onClick={e => e.stopPropagation()}>
+                <div className="item-modal-header">
+                    <h3>CHỌN TRANG BỊ CHIẾN THUẬT</h3>
+                    <button type="button" className="btn-close-modal" onClick={onClose}>&times;</button>
                 </div>
 
-                <div className="hero-modal-filters">
-                    <input 
-                        type="text" 
-                        placeholder="🔍 Tìm trang bị..." 
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="search-input"
-                    />
+                <div className="item-modal-filters">
+                    <input type="text" placeholder="🔍 Tìm trang bị..." value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)} className="search-input" />
                     <select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)}>
                         <option value="">TẤT CẢ LOẠI</option>
-                        {allCategories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                        {categories.map(c => <option key={c} value={c}>{c}</option>)}
                     </select>
                 </div>
 
-                <div className="hero-modal-grid">
+                <div className="item-modal-grid">
                     {filteredItems.map(item => (
                         <div 
                             key={item._id} 
-                            className={`hero-selection-card ${selectedItems.includes(item._id) ? 'active' : ''}`}
-                            style={{ position: 'relative' }}
+                            className={`item-selection-card ${selectedItems.includes(item._id) ? 'active' : ''}`}
+                            onClick={() => onToggle(item._id)} /* Đã đưa onClick ra ngoài cùng để bấm vào ảnh hay tên đều chọn được */
                         >
-                            <div className="avatar-wrapper" onClick={() => onToggle(item._id)}>
-                                <img src={getImgUrl(item.icon)} alt={item.name} className="hero-selection-img" />
+                            <div className="item-avatar-wrapper">
+                                <img src={getImgUrl(item.icon)} alt="icon" className="item-selection-img" />
                             </div>
-                            <span className="hero-selection-name">{item.name}</span>
+                            <span className="item-selection-name">{item.name}</span>
+                            
                             <button 
-                                className="item-detail-info-btn"
-                                onClick={() => setDetailItem(item)}
+                                type="button" 
+                                className="item-info-dot" 
+                                onClick={(e) => { 
+                                    e.stopPropagation(); // Ngăn sự kiện click chọn trang bị khi đang bấm nút xem chi tiết
+                                    setDetailItem(item); 
+                                }}
                                 title="Xem chi tiết"
-                            >i</button>
+                            >
+                                i
+                            </button>
                         </div>
                     ))}
                 </div>
 
-                {/* Sub-modal hiển thị chi tiết trang bị */}
                 {detailItem && (
-                    <div className="item-detail-popup">
-                        <div className="detail-content-box">
-                            <div className="detail-header-pop">
+                    <div className="item-mini-detail-pop">
+                        <div className="pop-content">
+                            <div className="pop-header">
                                 <img src={getImgUrl(detailItem.icon)} alt="icon" />
-                                <div>
-                                    <h4>{detailItem.name}</h4>
-                                    <span className="cat-tag">{detailItem.category?.name}</span>
-                                </div>
-                                <button onClick={() => setDetailItem(null)}>&times;</button>
+                                <h4>{detailItem.name}</h4>
+                                <button type="button" onClick={() => setDetailItem(null)}>&times;</button>
                             </div>
-                            <div className="detail-body-pop">
-                                <p><strong>Chỉ số:</strong> {detailItem.stats}</p>
+                            <div className="pop-body">
+                                <p><strong>Thuộc tính:</strong> {detailItem.stats}</p>
                                 <p><strong>Nội tại:</strong> {detailItem.passive}</p>
-                                {detailItem.price && <p><strong>Giá:</strong> <span style={{color: '#fbbf24'}}>{detailItem.price} vàng</span></p>}
+                                <p><strong>Giá:</strong> <span className="price-text">{detailItem.price} vàng</span></p>
                             </div>
                         </div>
                     </div>

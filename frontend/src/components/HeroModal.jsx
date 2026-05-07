@@ -1,7 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import './HeroModal.css';
 
-// HÀM HỖ TRỢ: Sửa lỗi đường dẫn ảnh (localhost hoặc link web)
 const getAvatarUrl = (url) => {
     if (!url) return 'https://placehold.co/80x80?text=Hero';
     if (url.startsWith('http') || url.startsWith('data:')) return url;
@@ -13,7 +12,6 @@ const HeroModal = ({ isOpen, onClose, heroes, onSelect }) => {
     const [roleFilter, setRoleFilter] = useState('');
     const [laneFilter, setLaneFilter] = useState('');
 
-    // RESET DỮ LIỆU KHI MỞ POPUP
     useEffect(() => {
         if (isOpen) {
             setSearchTerm('');
@@ -50,18 +48,12 @@ const HeroModal = ({ isOpen, onClose, heroes, onSelect }) => {
             <div className="hero-modal-content" onClick={e => e.stopPropagation()}>
                 <div className="hero-modal-header">
                     <h3>CHỌN TƯỚNG LÂM TRẬN</h3>
-                    <button className="btn-close-modal" onClick={onClose}>&times;</button>
+                    {/* THÊM type="button" ĐỂ NGĂN CHẶN LỖI SUBMIT FORM */}
+                    <button type="button" className="btn-close-modal" onClick={onClose}>&times;</button>
                 </div>
 
                 <div className="hero-modal-filters">
-                    <input 
-                        type="text" 
-                        placeholder="🔍 Tìm tên tướng..." 
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="search-input"
-                        autoFocus
-                    />
+                    <input type="text" placeholder="🔍 Tìm tên tướng..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="search-input" autoFocus />
                     <select value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)}>
                         <option value="">TẤT CẢ VAI TRÒ</option>
                         {allRoles.map(role => <option key={role} value={role}>{role}</option>)}
@@ -75,14 +67,9 @@ const HeroModal = ({ isOpen, onClose, heroes, onSelect }) => {
                 <div className="hero-modal-grid">
                     {filteredHeroes.length > 0 ? (
                         filteredHeroes.map(hero => (
-                            <div key={hero._id} className="hero-selection-card" onClick={() => { onSelect(hero._id); onClose(); }}>
+                            <div key={hero._id} className="hero-selection-card" onClick={() => onSelect(hero._id)}>
                                 <div className="avatar-wrapper">
-                                    <img 
-                                        src={getAvatarUrl(hero.avatar)} 
-                                        alt={hero.name} 
-                                        className="hero-selection-img"
-                                        onError={(e) => { e.target.src = 'https://placehold.co/80x80?text=Error' }}
-                                    />
+                                    <img src={getAvatarUrl(hero.avatar)} alt={hero.name} className="hero-selection-img" onError={(e) => { e.target.src = 'https://placehold.co/80x80?text=Error' }} />
                                 </div>
                                 <span className="hero-selection-name">{hero.name}</span>
                             </div>
