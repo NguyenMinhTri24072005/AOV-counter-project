@@ -1,0 +1,3 @@
+Lựa chọn A (Làm sạch Giai đoạn 3): Xử lý nốt các nút Thêm/Xóa/Sửa ở Admin Dashboard và làm Tab "Quản lý Kèo Đấu" cho Admin.
+
+Lựa chọn B (Tiến thẳng tới Giai đoạn 4 & 5): Làm User Dashboard cho phép User tự tạo kèo, sau đó nâng cấp thuật toán hiển thị Draft Mode với "Nút gạt 3 nấc".

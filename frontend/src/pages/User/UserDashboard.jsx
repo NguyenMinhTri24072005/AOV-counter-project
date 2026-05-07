@@ -1,22 +1,33 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { getHeroes, getItems, createMatchup } from '../../services/api';
+import { getHeroes, getItems, createMatchup, getMyMatchups, deleteMatchup } from '../../services/api';
 import { AuthContext } from '../../context/AuthContext';
+import '../Admin/Admin.css'; 
 
-const ManageMatchups = () => {
+const UserDashboard = () => {
     const { user } = useContext(AuthContext);
     const [heroes, setHeroes] = useState([]);
     const [items, setItems] = useState([]);
+    const [myMatchups, setMyMatchups] = useState([]);
     
     const initialForm = { enemyHeroId: '', counterHeroId: '', score: 3, note: '', counterItems: [] };
     const [formData, setFormData] = useState(initialForm);
 
     useEffect(() => {
-        const loadData = async () => {
-            const [resHeroes, resItems] = await Promise.all([getHeroes(), getItems()]);
-            setHeroes(resHeroes.data); setItems(resItems.data);
-        };
         loadData();
-    }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [user]);
+
+    const loadData = async () => {
+        if (!user) return;
+        try {
+            const [resHeroes, resItems, resMatchups] = await Promise.all([
+                getHeroes(), getItems(), getMyMatchups(user.id)
+            ]);
+            setHeroes(resHeroes.data);
+            setItems(resItems.data);
+            setMyMatchups(resMatchups.data);
+        } catch (error) { console.error("Lỗi:", error); }
+    };
 
     const handleItemToggle = (itemId) => {
         const newItems = formData.counterItems.includes(itemId)
@@ -29,14 +40,26 @@ const ManageMatchups = () => {
         e.preventDefault();
         try {
             await createMatchup({ ...formData, author: user.id });
-            alert("Tạo Kèo Khắc Chế Chuẩn thành công!");
+            alert("Tạo Kèo Cá Nhân thành công!");
             setFormData(initialForm);
+            loadData();
         } catch (error) { alert("Lỗi tạo kèo: " + error.message); }
     };
 
+    const handleDelete = async (matchupId) => {
+        if (window.confirm("Bạn muốn xóa Kèo cá nhân này?")) {
+            try {
+                await deleteMatchup(matchupId);
+                loadData();
+            } catch (error) { alert("Lỗi xóa kèo!"); }
+        }
+    }
+
+    const getHeroName = (id) => heroes.find(h => h._id === id)?.name || "Unknown";
+
     return (
         <div className="manage-container">
-            <h2>🔥 Quản lý Kèo Khắc Chế (Chuẩn Server)</h2>
+            <h2>👤 Bí kíp khắc chế của {user?.username}</h2>
             
             <form className="admin-form" onSubmit={handleSubmit}>
                 <div className="matchup-grid">
@@ -49,7 +72,7 @@ const ManageMatchups = () => {
                     </div>
 
                     <div>
-                        <label className="matchup-label ally">Tướng Đề Xuất (Pick Ta):</label>
+                        <label className="matchup-label ally">Tướng Ta (Khắc chế):</label>
                         <select className="matchup-select" required value={formData.counterHeroId} onChange={e => setFormData({...formData, counterHeroId: e.target.value})}>
                             <option value="">-- Chọn tướng khắc chế --</option>
                             {heroes.map(h => <option key={h._id} value={h._id}>{h.name}</option>)}
@@ -58,7 +81,7 @@ const ManageMatchups = () => {
                 </div>
 
                 <div className="score-container">
-                    <label className="matchup-label">Điểm Tối Ưu (1 - 5):</label>
+                    <label className="matchup-label">Độ hiệu quả (1 - 5):</label>
                     <input className="score-slider" type="range" min="1" max="5" value={formData.score} onChange={e => setFormData({...formData, score: Number(e.target.value)})}/>
                     <span className="score-display">{formData.score} Điểm</span>
                 </div>
@@ -75,14 +98,31 @@ const ManageMatchups = () => {
                     </div>
                 </div>
 
-                <textarea className="form-textarea" placeholder="Giải thích vì sao lại khắc chế (Chi tiết kỹ năng, lý do)..." required value={formData.note} onChange={e => setFormData({...formData, note: e.target.value})} />
-
-                <div className="form-actions">
-                    <button type="submit" className="btn-save">Lưu Kèo Đấu</button>
-                </div>
+                <textarea className="form-textarea" placeholder="Ghi chú chiến thuật của riêng bạn..." required value={formData.note} onChange={e => setFormData({...formData, note: e.target.value})} />
+                <div className="form-actions"><button type="submit" className="btn-save">Lưu Bí Kíp</button></div>
             </form>
+
+            <hr style={{ margin: '30px 0', border: '1px solid #eee' }} />
+            
+            <h3>📋 Danh sách Kèo bạn đã tạo ({myMatchups.length})</h3>
+            <table className="admin-table">
+                <thead>
+                    <tr><th>Địch</th><th>Tướng Ta</th><th>Điểm</th><th>Ghi chú</th><th>Thao tác</th></tr>
+                </thead>
+                <tbody>
+                    {myMatchups.map(m => (
+                        <tr key={m._id}>
+                            <td style={{ color: '#dc3545', fontWeight: 'bold' }}>{getHeroName(m.enemyHeroId)}</td>
+                            <td style={{ color: '#0d6efd', fontWeight: 'bold' }}>{getHeroName(m.counterHeroId)}</td>
+                            <td>{m.score}</td>
+                            <td>{m.note}</td>
+                            <td><button className="btn-del" onClick={() => handleDelete(m._id)}>Xóa</button></td>
+                        </tr>
+                    ))}
+                </tbody>
+            </table>
         </div>
     );
 };
 
-export default ManageMatchups;
+export default UserDashboard;

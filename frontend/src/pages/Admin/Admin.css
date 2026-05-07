@@ -240,3 +240,145 @@
         grid-template-columns: 1fr;
     }
 }
+
+/* =========================================
+   CÁC CLASS CHUẨN HÓA FORM (ĐÃ TÁCH TỪ JSX)
+========================================= */
+/* Hiệu ứng form khi đang ở chế độ Sửa */
+.admin-form.editing {
+    border: 2px solid #ffc107;
+}
+
+.edit-badge {
+    color: #ffc107;
+    margin-top: 0;
+    margin-bottom: 15px;
+}
+
+/* Hàng ngang chứa nhiều Input (Fix lỗi co dúm Input) */
+.form-row {
+    display: flex;
+    gap: 15px;
+    align-items: center;
+    width: 100%;
+}
+
+.form-row input,
+.form-row select {
+    flex: 1;
+    min-width: 0; /* QUAN TRỌNG: Ngăn chặn flexbox làm co dúm hoặc phình to ô nhập */
+    padding: 10px;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    font-size: 15px;
+}
+
+.form-textarea {
+    width: 100%;
+    padding: 10px;
+    border-radius: 4px;
+    border: 1px solid #ced4da;
+    margin-top: 10px;
+    min-height: 80px;
+    box-sizing: border-box;
+    font-family: inherit;
+    resize: vertical;
+}
+
+/* Nút bấm thao tác form */
+.form-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 15px;
+}
+
+.btn-cancel {
+    background-color: #6c757d;
+    color: white;
+    padding: 12px 20px;
+    border: none;
+    border-radius: 4px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+}
+.btn-cancel:hover { background-color: #5a6268; }
+
+.btn-update { background-color: #ffc107; color: #000; }
+.btn-update:hover { background-color: #e0a800; }
+
+/* =========================================
+   BỐ CỤC MANAGE METADATA
+========================================= */
+.metadata-layout {
+    display: flex;
+    gap: 30px;
+    margin-top: 20px;
+}
+
+.metadata-col { flex: 1; }
+.metadata-col h3 { padding-bottom: 10px; }
+.metadata-col.role-col h3 { border-bottom: 2px solid #007bff; }
+.metadata-col.category-col h3 { border-bottom: 2px solid #28a745; }
+
+.inline-form {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+.inline-form input {
+    flex: 1;
+    padding: 8px;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+}
+.btn-add-category { background-color: #28a745; }
+
+/* =========================================
+   BỐ CỤC MANAGE MATCHUPS
+========================================= */
+.matchup-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+
+.matchup-label {
+    font-weight: bold;
+    display: block;
+    margin-bottom: 5px;
+}
+.matchup-label.enemy { color: #dc3545; }
+.matchup-label.ally { color: #0d6efd; }
+
+.matchup-select {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+}
+
+.score-container { margin-top: 15px; }
+.score-slider { width: 200px; vertical-align: middle; }
+.score-display {
+    margin-left: 10px;
+    font-weight: bold;
+    font-size: 18px;
+    vertical-align: middle;
+}
+
+.item-checkbox-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+.item-checkbox-label {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    background-color: #f1f3f5;
+    padding: 5px 10px;
+    border-radius: 4px;
+    border: 1px solid #e9ecef;
+}
+.item-checkbox-label:hover { background-color: #e2e6ea; }

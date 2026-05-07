@@ -14,20 +14,23 @@ const createHero = async (req, res) => {
 
 const getAllHeroes = async (req, res) => {
     try {
-        const heroes = await Hero.find().sort({ name: 1 }); // Sắp xếp theo tên A-Z
+        // THÊM .populate('roles') để lấy được tên các vai trò
+        const heroes = await Hero.find().populate('roles').sort({ name: 1 });
         res.status(200).json(heroes);
     } catch (error) {
-        res.status(500).json({ message: 'Lỗi khi lấy danh sách tướng: ' + error.message });
+        res.status(500).json({ message: 'Lỗi: ' + error.message });
     }
 };
 
 const updateHero = async (req, res) => {
     try {
-        const updatedHero = await Hero.findByIdAndUpdate(req.params.id, req.body, { new: true });
+        // Thay { new: true } thành { returnDocument: 'after' }
+        const updatedHero = await Hero.findByIdAndUpdate(req.params.id, req.body, { returnDocument: 'after' });
         res.status(200).json(updatedHero);
-    } catch (error) { res.status(500).json({ message: error.message }); }
+    } catch (error) { 
+        res.status(500).json({ message: error.message }); 
+    }
 };
-
 const deleteHero = async (req, res) => {
     try {
         await Hero.findByIdAndDelete(req.params.id);

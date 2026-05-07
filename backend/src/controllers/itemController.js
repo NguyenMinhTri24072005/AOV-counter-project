@@ -12,10 +12,11 @@ const createItem = async (req, res) => {
 
 const getAllItems = async (req, res) => {
     try {
-        const items = await Item.find().sort({ name: 1 }); // Sắp xếp theo thứ tự chữ cái A-Z
+        // THÊM .populate('category') để lấy được thông tin từ bảng Category
+        const items = await Item.find().populate('category').sort({ name: 1 });
         res.status(200).json(items);
     } catch (error) {
-        res.status(500).json({ message: 'Lỗi khi lấy danh sách trang bị: ' + error.message });
+        res.status(500).json({ message: 'Lỗi: ' + error.message });
     }
 };
 

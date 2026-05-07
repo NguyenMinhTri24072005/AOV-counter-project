@@ -1,0 +1,36 @@
+.mode-toggle-container {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.toggle-label {
+    font-weight: bold;
+    color: #444;
+}
+
+.tri-state-toggle {
+    display: flex;
+    background: #eee;
+    padding: 4px;
+    border-radius: 25px;
+    border: 1px solid #ddd;
+}
+
+.tri-state-toggle button {
+    border: none;
+    padding: 6px 15px;
+    border-radius: 20px;
+    cursor: pointer;
+    background: transparent;
+    transition: all 0.3s;
+    font-weight: 600;
+    color: #666;
+}
+
+.tri-state-toggle button.active {
+    background: white;
+    color: #007bff;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
