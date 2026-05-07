@@ -70,7 +70,7 @@ function App() {
                             </span>
                             
                             <button className="btn-cyber btn-user" onClick={() => navigate('/profile')}>
-                                👤 Bí Kíp
+                                👤 Cá nhân
                             </button>
 
                             {user.role === 'admin' && (

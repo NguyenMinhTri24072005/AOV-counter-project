@@ -1,0 +1,217 @@
+.user-dashboard-container {
+    padding: 20px;
+    animation: fadeIn 0.5s ease;
+}
+
+/* PROFILE HEADER */
+.user-profile-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: linear-gradient(90deg, rgba(30, 41, 59, 0.8) 0%, rgba(15, 23, 42, 0.4) 100%);
+    padding: 30px;
+    border-radius: 16px;
+    border: 1px solid rgba(56, 189, 248, 0.2);
+    margin-bottom: 25px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+}
+
+.profile-card {
+    display: flex;
+    align-items: center;
+    gap: 25px;
+}
+
+/* --- TÍNH NĂNG UPLOAD AVATAR --- */
+.profile-avatar-wrapper {
+    position: relative;
+    width: 85px;
+    height: 85px;
+    border-radius: 50%;
+    overflow: hidden;
+    box-shadow: 0 0 20px rgba(56, 189, 248, 0.5);
+    border: 3px solid #38bdf8;
+    background: #0f172a;
+}
+
+.avatar-upload-label {
+    display: block;
+    width: 100%;
+    height: 100%;
+    cursor: pointer;
+    position: relative;
+}
+
+.user-avatar-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.profile-avatar-text {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 36px;
+    font-weight: 900;
+    font-family: 'Oswald';
+    color: #38bdf8;
+    background: rgba(56, 189, 248, 0.1);
+}
+
+.avatar-overlay {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0, 0, 0, 0.6);
+    color: #fff;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 24px;
+    opacity: 0;
+    transition: 0.3s;
+}
+
+.avatar-upload-label:hover .avatar-overlay {
+    opacity: 1;
+}
+
+/* --- THÔNG TIN USER --- */
+.profile-info h2 {
+    margin: 0 0 8px 0;
+    font-family: 'Oswald';
+    letter-spacing: 1px;
+}
+
+.profile-meta {
+    display: flex;
+    gap: 15px;
+}
+
+.rank-tag {
+    background: rgba(245, 158, 11, 0.1);
+    color: #f59e0b;
+    padding: 4px 12px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: bold;
+    border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.date-tag {
+    color: #64748b;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+}
+
+/* --- CỘT BÊN PHẢI (THỐNG KÊ & NÚT PWD) --- */
+.profile-actions-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 15px;
+}
+
+.stat-box {
+    background: rgba(0, 0, 0, 0.3);
+    padding: 10px 25px;
+    border-radius: 12px;
+    text-align: center;
+    border: 1px solid #334155;
+    min-width: 120px;
+}
+
+.stat-value {
+    display: block;
+    font-size: 24px;
+    font-weight: 900;
+    color: #38bdf8;
+    font-family: 'Oswald';
+}
+
+.stat-label {
+    font-size: 11px;
+    color: #94a3b8;
+    font-weight: bold;
+    text-transform: uppercase;
+}
+
+.btn-pwd-toggle {
+    background: transparent;
+    border: 1px solid #94a3b8;
+    color: #94a3b8;
+    padding: 6px 15px;
+    font-size: 12px;
+    border-radius: 6px;
+}
+
+.btn-pwd-toggle:hover {
+    border-color: #fff;
+    color: #fff;
+    box-shadow: 0 0 10px rgba(255,255,255,0.2);
+}
+
+/* --- FORM ĐỔI MẬT KHẨU --- */
+.password-change-box {
+    background: rgba(15, 23, 42, 0.9);
+    border: 1px dashed #38bdf8;
+    padding: 20px;
+    border-radius: 12px;
+    margin-bottom: 30px;
+    animation: fadeIn 0.3s ease;
+}
+
+.password-change-box h4 {
+    margin: 0 0 15px 0;
+    color: #38bdf8;
+    font-family: 'Oswald';
+    letter-spacing: 1px;
+}
+
+.pwd-form {
+    display: flex;
+    gap: 15px;
+}
+
+.pwd-form input {
+    flex: 1;
+    background: #1e293b;
+    border: 1px solid #334155;
+    color: #fff;
+    padding: 12px;
+    border-radius: 6px;
+}
+
+.pwd-form input:focus {
+    outline: none;
+    border-color: #38bdf8;
+}
+
+.btn-save-pwd {
+    background: #38bdf8;
+    color: #000;
+    border: none;
+}
+
+/* --- TIÊU ĐỀ SECTION --- */
+.section-title {
+    font-family: 'Oswald';
+    color: #fff;
+    margin-bottom: 20px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    border-left: 4px solid #38bdf8;
+    padding-left: 15px;
+}
+
+/* RESPONSIVE */
+@media (max-width: 768px) {
+    .user-profile-header { flex-direction: column; gap: 20px; text-align: center; }
+    .profile-card { flex-direction: column; }
+    .profile-meta { justify-content: center; }
+    .profile-actions-wrapper { align-items: center; width: 100%; }
+    .pwd-form { flex-direction: column; }
+}
