@@ -1,5 +1,7 @@
 .app-container {
-    max-width: 900px;
+    /* Đã sửa: Giới hạn chiều rộng linh hoạt theo 80% màn hình thay vì 900px cố định */
+    width: 80%; 
+    max-width: 1600px; /* Thêm max-width để tránh bị bè quá mức trên các màn hình siêu rộng (Ultra-wide) */
     margin: 0 auto;
     padding: 20px;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -51,4 +53,11 @@
     background-color: #f8f9fa;
     border-radius: 8px;
     color: #6c757d;
+}
+
+/* Thêm Responsive cho màn hình điện thoại/Tablet */
+@media (max-width: 1024px) {
+    .app-container {
+        width: 95%; /* Trên màn hình nhỏ thì chiếm 95% cho dễ nhìn */
+    }
 }

@@ -122,14 +122,14 @@
     border: 2px solid transparent;
 }
 
-/* Kích thước */
-.slot-box.ban { width: 80px; height: 35px; font-size: 12px; }
-.slot-box.pick { width: 110px; height: 50px; }
+/* Kích thước (ĐÃ FIX LỖI CSS TẠI ĐÂY) */
+.slot-box.banAlly, .slot-box.banEnemy { width: 80px; height: 35px; font-size: 12px; }
+.slot-box.pickAlly, .slot-box.pickEnemy { width: 110px; height: 50px; }
 
 /* Màu nền phân biệt Địch / Ta khi Filled */
 .enemy-col .slot-box.filled { background-color: #fdf2f3; border-color: #f5c2c7; }
 .ally-col .slot-box.filled { background-color: #f0f7ff; border-color: #cfe2ff; }
-.bans .slot-box.filled { background-color: #e9ecef; border-color: #6c757d; opacity: 0.8; text-decoration: line-through; }
+.bans .slot-box.filled { background-color: #e9ecef; border-color: #6c757d; opacity: 0.8; }
 
 /* HIỆU ỨNG VIỀN BORDER MÀU XANH / ĐỎ CHÉO */
 .slot-box.border-green {

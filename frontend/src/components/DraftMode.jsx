@@ -8,7 +8,7 @@ import './DraftMode.css';
 // HÀM HỖ TRỢ: Xử lý link ảnh (localhost hoặc link web)
 const getAvatarUrl = (url) => {
     if (!url) return 'https://placehold.co/80x80?text=No+Image';
-    if (url.startsWith('http')) return url;
+    if (url.startsWith('http') || url.startsWith('data:')) return url;
     return `http://localhost:5000${url}`;
 };
 
@@ -16,49 +16,79 @@ const DraftMode = ({ heroes }) => {
     const { user } = useContext(AuthContext);
     const [viewMode, setViewMode] = useState('standard');
 
-    const [bansEnemy, setBansEnemy] = useState([]);
-    const [bansAlly, setBansAlly] = useState([]);
-    const [picksEnemy, setPicksEnemy] = useState([]);
-    const [picksAlly, setPicksAlly] = useState([]);
+    // Mảng cố định số lượng ô. Ô trống mang giá trị null
+    const [bansEnemy, setBansEnemy] = useState([null, null, null, null]); // 4 Cấm Địch
+    const [bansAlly, setBansAlly] = useState([null, null, null]);       // 3 Cấm Ta
+    const [picksEnemy, setPicksEnemy] = useState([null, null, null, null, null]); // 5 Chọn Địch
+    const [picksAlly, setPicksAlly] = useState([null, null, null, null, null]);   // 5 Chọn Ta
 
-    const [selectedHero, setSelectedHero] = useState("");
+    // Ghi nhớ Ô nào (index) và Loại nào (ban/pick) đang được bấm để gán tướng
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [targetAction, setTargetAction] = useState({ type: null, index: null });
 
     const [allEnemyCounters, setAllEnemyCounters] = useState([]);
     const [allAllyCounters, setAllAllyCounters] = useState([]);
     const [isAnalyzing, setIsAnalyzing] = useState(false);
 
-    const allExcluded = [...bansEnemy, ...bansAlly, ...picksEnemy, ...picksAlly];
+    // Lọc bỏ các ô null để lấy danh sách tướng thực tế đang có trên bàn cờ
+    const validBansEnemy = bansEnemy.filter(Boolean);
+    const validBansAlly = bansAlly.filter(Boolean);
+    const validPicksEnemy = picksEnemy.filter(Boolean);
+    const validPicksAlly = picksAlly.filter(Boolean);
+
+    const allExcluded = [...validBansEnemy, ...validBansAlly, ...validPicksEnemy, ...validPicksAlly];
     const availableHeroes = heroes.filter(hero => !allExcluded.includes(hero._id));
 
-    const handleAddHero = (actionType) => {
-        if (!selectedHero) return;
-        if (actionType === 'banEnemy' && bansEnemy.length < 4) setBansEnemy([...bansEnemy, selectedHero]);
-        else if (actionType === 'banAlly' && bansAlly.length < 3) setBansAlly([...bansAlly, selectedHero]);
-        else if (actionType === 'pickEnemy' && picksEnemy.length < 5) setPicksEnemy([...picksEnemy, selectedHero]);
-        else if (actionType === 'pickAlly' && picksAlly.length < 5) setPicksAlly([...picksAlly, selectedHero]);
-        setSelectedHero("");
+    // Mở Popup và ghi nhớ vị trí ô
+    const openModalFor = (type, index) => {
+        setTargetAction({ type, index });
+        setIsModalOpen(true);
     };
 
-    const handleRemoveHero = (actionType, heroId) => {
-        if (actionType === 'banEnemy') setBansEnemy(bansEnemy.filter(id => id !== heroId));
-        if (actionType === 'banAlly') setBansAlly(bansAlly.filter(id => id !== heroId));
-        if (actionType === 'pickEnemy') setPicksEnemy(picksEnemy.filter(id => id !== heroId));
-        if (actionType === 'pickAlly') setPicksAlly(picksAlly.filter(id => id !== heroId));
+    // Điền tướng vào ĐÚNG VỊ TRÍ ô đã bấm
+    const handleSelectHero = (heroId) => {
+        if (!heroId || targetAction.index === null) return;
+        const { type, index } = targetAction;
+
+        if (type === 'banEnemy') {
+            const newArr = [...bansEnemy]; newArr[index] = heroId; setBansEnemy(newArr);
+        } else if (type === 'banAlly') {
+            const newArr = [...bansAlly]; newArr[index] = heroId; setBansAlly(newArr);
+        } else if (type === 'pickEnemy') {
+            const newArr = [...picksEnemy]; newArr[index] = heroId; setPicksEnemy(newArr);
+        } else if (type === 'pickAlly') {
+            const newArr = [...picksAlly]; newArr[index] = heroId; setPicksAlly(newArr);
+        }
+        
+        setIsModalOpen(false);
+        setTargetAction({ type: null, index: null });
+    };
+
+    // Xóa tướng khỏi ô (Trả ô về giá trị null)
+    const handleRemoveHero = (type, index, e) => {
+        e.stopPropagation(); // Ngăn chặn click lan ra ngoài gây mở Popup
+        if (type === 'banEnemy') {
+            const newArr = [...bansEnemy]; newArr[index] = null; setBansEnemy(newArr);
+        } else if (type === 'banAlly') {
+            const newArr = [...bansAlly]; newArr[index] = null; setBansAlly(newArr);
+        } else if (type === 'pickEnemy') {
+            const newArr = [...picksEnemy]; newArr[index] = null; setPicksEnemy(newArr);
+        } else if (type === 'pickAlly') {
+            const newArr = [...picksAlly]; newArr[index] = null; setPicksAlly(newArr);
+        }
     };
 
     useEffect(() => {
         const fetchAllRelations = async () => {
             setIsAnalyzing(true);
             try {
-                // Gọi API kèm theo View Mode hiện tại
-                if (picksEnemy.length > 0) {
-                    const resEnemy = await getCounters(picksEnemy, [], viewMode, user?.id);
+                if (validPicksEnemy.length > 0) {
+                    const resEnemy = await getCounters(validPicksEnemy, [], viewMode, user?.id);
                     setAllEnemyCounters(resEnemy.data);
                 } else setAllEnemyCounters([]);
 
-                if (picksAlly.length > 0) {
-                    const resAlly = await getCounters(picksAlly, [], viewMode, user?.id);
+                if (validPicksAlly.length > 0) {
+                    const resAlly = await getCounters(validPicksAlly, [], viewMode, user?.id);
                     setAllAllyCounters(resAlly.data);
                 } else setAllAllyCounters([]);
             } catch (error) {
@@ -69,26 +99,41 @@ const DraftMode = ({ heroes }) => {
         };
 
         fetchAllRelations();
-    }, [picksEnemy, picksAlly, viewMode, user]); // Phân tích lại nếu User gạt nút đổi Mode
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [picksEnemy, picksAlly, viewMode, user]); 
 
-    const isEnemyCounteredByAlly = (enemyId) => allEnemyCounters.some(c => picksAlly.includes(c.hero._id) && c.matchupDetails.some(d => d.enemyId === enemyId));
-    const isAllyCounteredByEnemy = (allyId) => allAllyCounters.some(c => picksEnemy.includes(c.hero._id) && c.matchupDetails.some(d => d.enemyId === allyId));
+    const isEnemyCounteredByAlly = (enemyId) => allEnemyCounters.some(c => validPicksAlly.includes(c.hero._id) && c.matchupDetails.some(d => d.enemyId === enemyId));
+    const isAllyCounteredByEnemy = (allyId) => allAllyCounters.some(c => validPicksEnemy.includes(c.hero._id) && c.matchupDetails.some(d => d.enemyId === allyId));
 
-    const excludedFromRecommendations = [...bansEnemy, ...bansAlly, ...picksEnemy];
+    const excludedFromRecommendations = [...validBansEnemy, ...validBansAlly, ...validPicksEnemy];
     const recommendedToPick = allEnemyCounters.filter(item => !excludedFromRecommendations.includes(item.hero._id));
 
-    const excludedFromThreats = [...bansEnemy, ...bansAlly, ...picksAlly];
+    const excludedFromThreats = [...validBansEnemy, ...validBansAlly, ...validPicksAlly];
     const threatsToOurTeam = allAllyCounters.filter(item => !excludedFromThreats.includes(item.hero._id));
 
-    // Lấy Tên và Ảnh của tướng từ ID
     const getHeroName = (id) => heroes.find(h => h._id === id)?.name || "Unknown";
     const getHeroAvatar = (id) => heroes.find(h => h._id === id)?.avatar || "";
 
-    // COMPONENT CON: Ô hiển thị tướng trong bàn cờ
-    const SlotBox = ({ type, id, onRemove, highlightClass }) => {
-        if (!id) return <div className={`slot-box empty ${type}`}>Trống</div>;
+    // COMPONENT CON: Ô hiển thị tướng trên bàn cờ
+    const SlotBox = ({ type, id, index, highlightClass }) => {
+        if (!id) return (
+            <div 
+                className={`slot-box empty ${type}`} 
+                onClick={() => openModalFor(type, index)}
+                style={{ cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center', borderStyle: 'dashed', borderColor: '#aaa', backgroundColor: '#f9f9f9', transition: 'all 0.2s' }}
+                title="Bấm để chọn tướng"
+            >
+                <span style={{ fontSize: '28px', color: '#ccc', fontWeight: 'bold' }}>+</span>
+            </div>
+        );
+
         return (
-            <div className={`slot-box filled ${type} ${highlightClass || ''}`} style={{ position: 'relative', overflow: 'hidden' }}>
+            <div 
+                className={`slot-box filled ${type} ${highlightClass || ''}`} 
+                onClick={() => openModalFor(type, index)} 
+                title="Bấm để đổi tướng"
+                style={{ position: 'relative', overflow: 'hidden', cursor: 'pointer', transition: 'transform 0.2s' }}
+            >
                 <img 
                     src={getAvatarUrl(getHeroAvatar(id))} 
                     alt="Hero" 
@@ -97,7 +142,7 @@ const DraftMode = ({ heroes }) => {
                 <span className="hero-name" style={{ zIndex: 2, position: 'relative', fontWeight: 'bold', textShadow: '0px 1px 3px rgba(0,0,0,0.8)', color: '#fff' }}>
                     {getHeroName(id)}
                 </span>
-                <button className="remove-btn" onClick={() => onRemove(id)} style={{ zIndex: 2, position: 'relative' }}>×</button>
+                <button className="remove-btn" onClick={(e) => handleRemoveHero(type, index, e)} style={{ zIndex: 2, position: 'relative' }}>×</button>
             </div>
         );
     };
@@ -106,40 +151,23 @@ const DraftMode = ({ heroes }) => {
         <div className="draft-mode-container">
             <ModeToggle mode={viewMode} setMode={setViewMode} />
 
-            <div className="action-bar">
-                {/* NÚT GỌI POPUP CHỌN TƯỚNG */}
-                <div style={{ flex: 1 }}>
-                    <button
-                        className="draft-select"
-                        onClick={() => setIsModalOpen(true)}
-                        style={{ width: '100%', textAlign: 'left', background: 'white', color: selectedHero ? '#000' : '#888', padding: '12px', borderRadius: '6px', border: '2px solid #007bff', cursor: 'pointer', fontWeight: 'bold' }}
-                    >
-                        {selectedHero ? `👉 Đang nhắm: ${getHeroName(selectedHero)}` : '🔍 BẤM VÀO ĐÂY ĐỂ CHỌN TƯỚNG VÀO BÀN CỜ'}
-                    </button>
+            <HeroModal
+                isOpen={isModalOpen}
+                onClose={() => { setIsModalOpen(false); setTargetAction({ type: null, index: null }); }}
+                heroes={availableHeroes}
+                onSelect={handleSelectHero}
+            />
 
-                    <HeroModal
-                        isOpen={isModalOpen}
-                        onClose={() => setIsModalOpen(false)}
-                        heroes={availableHeroes} // Chỉ hiển thị tướng chưa bị Cấm/Chọn
-                        onSelect={(id) => setSelectedHero(id)}
-                    />
-                </div>
-
-                <div className="action-buttons">
-                    <button className="btn-pick-ally" onClick={() => handleAddHero('pickAlly')} disabled={!selectedHero || picksAlly.length >= 5}>🛡️ Pick Ta ({picksAlly.length}/5)</button>
-                    <button className="btn-ban-ally" onClick={() => handleAddHero('banAlly')} disabled={!selectedHero || bansAlly.length >= 3}>🚫 Ban Ta ({bansAlly.length}/3)</button>
-                    <button className="btn-pick-enemy" onClick={() => handleAddHero('pickEnemy')} disabled={!selectedHero || picksEnemy.length >= 5}>⚔️ Pick Địch ({picksEnemy.length}/5)</button>
-                    <button className="btn-ban-enemy" onClick={() => handleAddHero('banEnemy')} disabled={!selectedHero || bansEnemy.length >= 4}>🚫 Ban Địch ({bansEnemy.length}/4)</button>
-                </div>
-            </div>
-
-            <div className="draft-board-split">
+            {/* BÀN CỜ GIAO DIỆN MỚI */}
+            <div className="draft-board-split" style={{ marginTop: '20px' }}>
                 <div className="team-col ally-col">
                     <h2 className="col-title ally-title">🛡️ ĐỘI TA</h2>
                     <div className="bans-row">
                         <h4>Tướng Cấm (3)</h4>
                         <div className="slots-container bans">
-                            {[0, 1, 2].map(i => <SlotBox key={`ab-${i}`} type="ban" id={bansAlly[i]} onRemove={(id) => handleRemoveHero('banAlly', id)} />)}
+                            {[0, 1, 2].map(i => (
+                                <SlotBox key={`ab-${i}`} type="banAlly" id={bansAlly[i]} index={i} />
+                            ))}
                         </div>
                     </div>
                     <div className="picks-row">
@@ -148,7 +176,7 @@ const DraftMode = ({ heroes }) => {
                             {[0, 1, 2, 3, 4].map(i => {
                                 const aId = picksAlly[i];
                                 const highlight = aId && isAllyCounteredByEnemy(aId) ? 'border-red' : '';
-                                return <SlotBox key={`ap-${i}`} type="pick" id={aId} highlightClass={highlight} onRemove={(id) => handleRemoveHero('pickAlly', id)} />
+                                return <SlotBox key={`ap-${i}`} type="pickAlly" id={aId} index={i} highlightClass={highlight} />;
                             })}
                         </div>
                     </div>
@@ -159,7 +187,9 @@ const DraftMode = ({ heroes }) => {
                     <div className="bans-row">
                         <h4>Tướng Cấm (4)</h4>
                         <div className="slots-container bans">
-                            {[0, 1, 2, 3].map(i => <SlotBox key={`eb-${i}`} type="ban" id={bansEnemy[i]} onRemove={(id) => handleRemoveHero('banEnemy', id)} />)}
+                            {[0, 1, 2, 3].map(i => (
+                                <SlotBox key={`eb-${i}`} type="banEnemy" id={bansEnemy[i]} index={i} />
+                            ))}
                         </div>
                     </div>
                     <div className="picks-row">
@@ -168,7 +198,7 @@ const DraftMode = ({ heroes }) => {
                             {[0, 1, 2, 3, 4].map(i => {
                                 const eId = picksEnemy[i];
                                 const highlight = eId && isEnemyCounteredByAlly(eId) ? 'border-green' : '';
-                                return <SlotBox key={`ep-${i}`} type="pick" id={eId} highlightClass={highlight} onRemove={(id) => handleRemoveHero('pickEnemy', id)} />
+                                return <SlotBox key={`ep-${i}`} type="pickEnemy" id={eId} index={i} highlightClass={highlight} />
                             })}
                         </div>
                     </div>
@@ -182,7 +212,7 @@ const DraftMode = ({ heroes }) => {
                     {isAnalyzing ? <p className="loading-text">Máy chủ đang phân tích...</p> : recommendedToPick.length > 0 ? (
                         <div className="recommendation-grid">
                             {recommendedToPick.map((rec) => {
-                                const isPickedByAlly = picksAlly.includes(rec.hero._id);
+                                const isPickedByAlly = validPicksAlly.includes(rec.hero._id);
                                 return (
                                     <div key={rec.hero._id} className="rec-card" style={{ border: isPickedByAlly ? '2px solid #28a745' : '1px solid #e0e0e0', display: 'flex', gap: '15px' }}>
                                         <img src={getAvatarUrl(rec.hero.avatar)} style={{ width: '60px', height: '60px', borderRadius: '8px', objectFit: 'cover' }} alt="hero" />
@@ -219,7 +249,7 @@ const DraftMode = ({ heroes }) => {
                     {isAnalyzing ? <p className="loading-text">Đang phân tích...</p> : threatsToOurTeam.length > 0 ? (
                         <div className="recommendation-grid">
                             {threatsToOurTeam.map((threat) => {
-                                const isPickedByEnemy = picksEnemy.includes(threat.hero._id);
+                                const isPickedByEnemy = validPicksEnemy.includes(threat.hero._id);
                                 return (
                                     <div key={threat.hero._id} className="rec-card threat-card" style={{ border: isPickedByEnemy ? '2px solid #dc3545' : '1px solid #e0e0e0', display: 'flex', gap: '15px' }}>
                                         <img src={getAvatarUrl(threat.hero.avatar)} style={{ width: '60px', height: '60px', borderRadius: '8px', objectFit: 'cover' }} alt="hero" />
