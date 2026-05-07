@@ -5,7 +5,6 @@ import ModeToggle from './ModeToggle';
 import HeroModal from './HeroModal';
 import './DraftMode.css';
 
-// HÀM HỖ TRỢ: Xử lý link ảnh (localhost hoặc link web)
 const getAvatarUrl = (url) => {
     if (!url) return 'https://placehold.co/80x80?text=No+Image';
     if (url.startsWith('http') || url.startsWith('data:')) return url;
@@ -16,7 +15,6 @@ const DraftMode = ({ heroes }) => {
     const { user } = useContext(AuthContext);
     const [viewMode, setViewMode] = useState('standard');
 
-    // Mảng cố định 4 ô Cấm và 5 ô Chọn cho mỗi bên [cite: 916]
     const [bansEnemy, setBansEnemy] = useState([null, null, null, null]); 
     const [bansAlly, setBansAlly] = useState([null, null, null, null]);   
     const [picksEnemy, setPicksEnemy] = useState([null, null, null, null, null]); 
@@ -61,7 +59,7 @@ const DraftMode = ({ heroes }) => {
     };
 
     const handleRemoveHero = (type, index, e) => {
-        e.stopPropagation(); // QUAN TRỌNG: Ngăn chặn click lan ra ngoài gây mở Modal [cite: 939]
+        e.stopPropagation();
         if (type === 'banEnemy') {
             const newArr = [...bansEnemy]; newArr[index] = null; setBansEnemy(newArr);
         } else if (type === 'banAlly') {
@@ -107,35 +105,81 @@ const DraftMode = ({ heroes }) => {
     const excludedFromThreats = [...validBansEnemy, ...validBansAlly, ...validPicksAlly];
     const threatsToOurTeam = allAllyCounters.filter(item => !excludedFromThreats.includes(item.hero._id));
 
-    // COMPONENT Ô TƯỚNG ĐÃ TÁCH CẤU TRÚC ĐỂ NỔI NÚT X [cite: 925, 931]
+    // HÀM HỖ TRỢ: Lọc dữ liệu dùng cho Split View (So sánh chéo)
+    const getFilteredCards = (cards, sourceFilter) => {
+        if (!cards) return [];
+        return cards.map(card => {
+            const filteredDetails = card.matchupDetails.filter(d => {
+                if (sourceFilter === 'system') return d.isSystem;
+                if (sourceFilter === 'personal') return !d.isSystem; // Kèo của user
+                return true;
+            });
+            return { ...card, matchupDetails: filteredDetails };
+        }).filter(card => card.matchupDetails.length > 0);
+    };
+
     const SlotBox = ({ type, id, index, highlightClass }) => {
         if (!id) return (
-            <div 
-                className={`slot-box empty ${type}`} 
-                onClick={() => openModalFor(type, index)}
-                title="Bấm để chọn tướng"
-            >
+            <div className={`slot-box empty ${type}`} onClick={() => openModalFor(type, index)} title="Bấm để chọn tướng">
                 <span className="plus-icon">+</span>
             </div>
         );
-
         return (
-            <div 
-                className={`slot-box filled ${type} ${highlightClass || ''}`} 
-                onClick={() => openModalFor(type, index)} 
-                title="Bấm để đổi tướng"
-            >
+            <div className={`slot-box filled ${type} ${highlightClass || ''}`} onClick={() => openModalFor(type, index)} title="Bấm để đổi tướng">
                 <div className="slot-image-container">
-                    <img 
-                        src={getAvatarUrl(getHeroAvatar(id))} 
-                        alt="Hero" 
-                        className="slot-img-bg"
-                    />
-                    <div className="slot-name-overlay">
-                        <span className="hero-name">{getHeroName(id)}</span>
-                    </div>
+                    <img src={getAvatarUrl(getHeroAvatar(id))} alt="Hero" className="slot-img-bg" />
+                    <div className="slot-name-overlay"><span className="hero-name">{getHeroName(id)}</span></div>
                 </div>
                 <button className="remove-btn" onClick={(e) => handleRemoveHero(type, index, e)}>×</button>
+            </div>
+        );
+    };
+
+    // HÀM HIỂN THỊ DANH SÁCH CARD (Dùng chung để tránh lặp code)
+    const renderCards = (cardsList, isThreatBox) => {
+        if (cardsList.length === 0) return <p className="no-results" style={{ fontSize: '13px' }}>Không có dữ liệu phù hợp.</p>;
+        
+        return (
+            <div className="recommendation-grid">
+                {cardsList.map((dataObj) => {
+                    // Check xem tướng này ta đã chọn (nếu là recommend) hay địch đã chọn (nếu là threat)
+                    const isPicked = isThreatBox ? validPicksEnemy.includes(dataObj.hero._id) : validPicksAlly.includes(dataObj.hero._id);
+                    const colorMain = isThreatBox ? '#dc3545' : '#28a745';
+                    const textLabel = isThreatBox ? '(Địch Đã Chọn)' : '(Đã Chọn)';
+
+                    return (
+                        <div key={dataObj.hero._id} className="rec-card" style={{ border: isPicked ? `2px solid ${colorMain}` : '1px solid #334155', display: 'flex', gap: '15px' }}>
+                            <img src={getAvatarUrl(dataObj.hero.avatar)} style={{ width: '60px', height: '60px', borderRadius: '8px', objectFit: 'cover' }} alt="hero" />
+                            <div style={{ flex: 1 }}>
+                                <div className="rec-header" style={{ padding: 0, border: 'none', background: 'transparent' }}>
+                                    <strong>{dataObj.hero.name} {isPicked && <span style={{ color: colorMain, fontSize: '12px' }}>{textLabel}</span>}</strong>
+                                    <span className="score-badge" style={{ background: isThreatBox ? '#ef4444' : '#f59e0b', color: isThreatBox ? '#fff' : '#000' }}>
+                                        {isThreatBox ? 'NGUY HIỂM: ' : 'ĐIỂM: '}{dataObj.totalScore}
+                                    </span>
+                                </div>
+                                <div className="rec-body" style={{ padding: '10px 0 0 0' }}>
+                                    <ul className="rec-details-list">
+                                        {dataObj.matchupDetails.map((detail, idx) => (
+                                            <li key={idx}>
+                                                Khắc chế 
+                                                {/* MINI AVATAR TẠI ĐÂY */}
+                                                <img src={getAvatarUrl(getHeroAvatar(detail.enemyId))} className="mini-inline-avatar" alt="enemy" title={getHeroName(detail.enemyId)} />
+                                                <b style={{color: isThreatBox ? '#ef4444' : '#f59e0b'}}>{getHeroName(detail.enemyId)}</b> ({detail.score}đ)
+                                                
+                                                <div className="rec-note">
+                                                    "{detail.note}"
+                                                    <div style={{ fontSize: '11px', marginTop: '3px', color: detail.isSystem ? '#38bdf8' : '#10b981', fontWeight: 'bold' }}>
+                                                        Nguồn: {detail.isSystem ? 'Hệ Thống' : detail.authorName}
+                                                    </div>
+                                                </div>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    );
+                })}
             </div>
         );
     };
@@ -144,23 +188,15 @@ const DraftMode = ({ heroes }) => {
         <div className="draft-mode-container">
             <ModeToggle mode={viewMode} setMode={setViewMode} />
 
-            <HeroModal
-                isOpen={isModalOpen}
-                onClose={() => { setIsModalOpen(false); setTargetAction({ type: null, index: null }); }}
-                heroes={availableHeroes}
-                onSelect={handleSelectHero}
-            />
+            <HeroModal isOpen={isModalOpen} onClose={() => { setIsModalOpen(false); setTargetAction({ type: null, index: null }); }} heroes={availableHeroes} onSelect={handleSelectHero} />
 
             <div className="draft-board-split" style={{ marginTop: '20px' }}>
-                {/* ĐỘI TA [cite: 918, 919] */}
                 <div className="team-col ally-col">
                     <h2 className="col-title ally-title">🛡️ ĐỘI TA</h2>
                     <div className="bans-row">
                         <h4>Tướng Cấm (4)</h4>
                         <div className="slots-container bans">
-                            {[0, 1, 2, 3].map(i => (
-                                <SlotBox key={`ab-${i}`} type="banAlly" id={bansAlly[i]} index={i} />
-                            ))}
+                            {[0, 1, 2, 3].map(i => <SlotBox key={`ab-${i}`} type="banAlly" id={bansAlly[i]} index={i} />)}
                         </div>
                     </div>
                     <div className="picks-row">
@@ -175,15 +211,12 @@ const DraftMode = ({ heroes }) => {
                     </div>
                 </div>
 
-                {/* ĐỘI ĐỊCH [cite: 920, 921] */}
                 <div className="team-col enemy-col">
                     <h2 className="col-title enemy-title">⚔️ ĐỘI ĐỊCH</h2>
                     <div className="bans-row">
                         <h4>Tướng Cấm (4)</h4>
                         <div className="slots-container bans">
-                            {[0, 1, 2, 3].map(i => (
-                                <SlotBox key={`eb-${i}`} type="banEnemy" id={bansEnemy[i]} index={i} />
-                            ))}
+                            {[0, 1, 2, 3].map(i => <SlotBox key={`eb-${i}`} type="banEnemy" id={bansEnemy[i]} index={i} />)}
                         </div>
                     </div>
                     <div className="picks-row">
@@ -199,80 +232,47 @@ const DraftMode = ({ heroes }) => {
                 </div>
             </div>
 
-            {/* BẢNG PHÂN TÍCH [cite: 940, 941] */}
             <div className="analysis-container">
+                {/* BẢNG ĐỀ XUẤT */}
                 <div className="analysis-board board-recommend">
                     <h2>📊 Tướng Đề Xuất Khắc Chế Địch</h2>
-                    {isAnalyzing ? <p className="loading-text">Máy chủ đang phân tích...</p> : recommendedToPick.length > 0 ? (
-                        <div className="recommendation-grid">
-                            {recommendedToPick.map((rec) => {
-                                const isPickedByAlly = validPicksAlly.includes(rec.hero._id);
-                                return (
-                                    <div key={rec.hero._id} className="rec-card" style={{ border: isPickedByAlly ? '2px solid #28a745' : '1px solid #334155', display: 'flex', gap: '15px' }}>
-                                        <img src={getAvatarUrl(rec.hero.avatar)} style={{ width: '60px', height: '60px', borderRadius: '8px', objectFit: 'cover' }} alt="hero" />
-                                        <div style={{ flex: 1 }}>
-                                            <div className="rec-header" style={{ padding: 0, border: 'none', background: 'transparent' }}>
-                                                <strong>{rec.hero.name} {isPickedByAlly && <span style={{ color: '#28a745', fontSize: '12px' }}>(Đã Chọn)</span>}</strong>
-                                                <span className="score-badge">ĐIỂM: {rec.totalScore}</span>
-                                            </div>
-                                            <div className="rec-body" style={{ padding: '10px 0 0 0' }}>
-                                                <ul className="rec-details-list">
-                                                    {rec.matchupDetails.map((detail, idx) => (
-                                                        <li key={idx}>
-                                                            Khắc chế <b style={{color: '#f59e0b'}}>{getHeroName(detail.enemyId)}</b> ({detail.score}đ)
-                                                            <div className="rec-note">
-                                                                "{detail.note}"
-                                                                <div style={{ fontSize: '11px', marginTop: '3px', color: detail.isSystem ? '#38bdf8' : '#10b981', fontWeight: 'bold' }}>
-                                                                    Nguồn: {detail.isSystem ? 'Hệ Thống' : detail.authorName}
-                                                                </div>
-                                                            </div>
-                                                        </li>
-                                                    ))}
-                                                </ul>
-                                            </div>
-                                        </div>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    ) : <p className="no-results">Chưa có đề xuất nào.</p>}
+                    {isAnalyzing ? <p className="loading-text">Máy chủ đang phân tích...</p> : (
+                        viewMode === 'compare' ? (
+                            <div className="compare-split-layout">
+                                <div className="compare-col system-col">
+                                    <h3 className="compare-sub-title">🤖 HỆ THỐNG</h3>
+                                    {renderCards(getFilteredCards(recommendedToPick, 'system'), false)}
+                                </div>
+                                <div className="compare-col personal-col">
+                                    <h3 className="compare-sub-title">👤 CÁ NHÂN</h3>
+                                    {renderCards(getFilteredCards(recommendedToPick, 'personal'), false)}
+                                </div>
+                            </div>
+                        ) : (
+                            renderCards(recommendedToPick, false)
+                        )
+                    )}
                 </div>
 
+                {/* BẢNG CẢNH BÁO NGUY HIỂM */}
                 <div className="analysis-board board-threat">
                     <h2>⚠️ Cảnh báo: Tướng Địch khắc chế Ta</h2>
-                    {isAnalyzing ? <p className="loading-text">Đang phân tích...</p> : threatsToOurTeam.length > 0 ? (
-                        <div className="recommendation-grid">
-                            {threatsToOurTeam.map((threat) => {
-                                const isPickedByEnemy = validPicksEnemy.includes(threat.hero._id);
-                                return (
-                                    <div key={threat.hero._id} className="rec-card threat-card" style={{ border: isPickedByEnemy ? '2px solid #dc3545' : '1px solid #334155', display: 'flex', gap: '15px' }}>
-                                        <img src={getAvatarUrl(threat.hero.avatar)} style={{ width: '60px', height: '60px', borderRadius: '8px', objectFit: 'cover' }} alt="hero" />
-                                        <div style={{ flex: 1 }}>
-                                            <div className="rec-header threat-header" style={{ padding: 0, border: 'none', background: 'transparent' }}>
-                                                <strong>{threat.hero.name} {isPickedByEnemy && <span style={{ color: '#dc3545', fontSize: '12px' }}>(Địch Đã Chọn)</span>}</strong>
-                                                <span className="score-badge threat-badge">NGUY HIỂM: {threat.totalScore}</span>
-                                            </div>
-                                            <div className="rec-body" style={{ padding: '10px 0 0 0' }}>
-                                                <ul className="rec-details-list">
-                                                    {threat.matchupDetails.map((detail, idx) => (
-                                                        <li key={idx}>
-                                                            Khắc chế <b style={{color: 'red'}}>{getHeroName(detail.enemyId)}</b> ({detail.score}đ)
-                                                            <div className="rec-note">
-                                                                "{detail.note}"
-                                                                <div style={{ fontSize: '11px', marginTop: '3px', color: detail.isSystem ? '#38bdf8' : '#10b981', fontWeight: 'bold' }}>
-                                                                    Nguồn: {detail.isSystem ? 'Hệ Thống' : detail.authorName}
-                                                                </div>
-                                                            </div>
-                                                        </li>
-                                                    ))}
-                                                </ul>
-                                            </div>
-                                        </div>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    ) : <p className="no-results">Đội hình Ta hiện tại đang an toàn.</p>}
+                    {isAnalyzing ? <p className="loading-text">Đang phân tích...</p> : (
+                        viewMode === 'compare' ? (
+                            <div className="compare-split-layout">
+                                <div className="compare-col system-col">
+                                    <h3 className="compare-sub-title">🤖 HỆ THỐNG</h3>
+                                    {renderCards(getFilteredCards(threatsToOurTeam, 'system'), true)}
+                                </div>
+                                <div className="compare-col personal-col">
+                                    <h3 className="compare-sub-title">👤 CÁ NHÂN</h3>
+                                    {renderCards(getFilteredCards(threatsToOurTeam, 'personal'), true)}
+                                </div>
+                            </div>
+                        ) : (
+                            renderCards(threatsToOurTeam, true)
+                        )
+                    )}
                 </div>
             </div>
         </div>

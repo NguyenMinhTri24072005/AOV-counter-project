@@ -37,7 +37,8 @@ const SoloCounter = ({ heroes }) => {
 
         setSections(sections.map(s => s.id === sectionId ? { ...s, loading: true } : s));
         try {
-            const response = await getCounters([section.enemyHeroId], [], viewMode, user?.id);
+            // LUÔN FETCH TOÀN BỘ DỮ LIỆU (mode 'pro') ĐỂ FRONTEND LỌC MƯỢT MÀ KHI CHUYỂN TAB
+            const response = await getCounters([section.enemyHeroId], [], 'pro', user?.id);
             setSections(sections.map(s => 
                 s.id === sectionId ? { ...s, results: response.data, loading: false } : s
             ));
@@ -47,41 +48,57 @@ const SoloCounter = ({ heroes }) => {
         }
     };
 
-    // Hàm render Card tướng, fix lỗi biến 'item' và key duy nhất
-    const renderHeroCard = (item, filteredDetails, isSystemSide, sectionId) => (
-        <div key={`${sectionId}-${isSystemSide ? 'sys' : 'user'}-${item.hero._id}`} className={`counter-card-neon ${isSystemSide ? 'sys-card' : 'user-card'}`}>
-            <div className="card-header">
-                <div className="hero-info">
-                    <div className="avatar-frame">
-                        <img src={getImgUrl(item.hero.avatar)} alt={item.hero.name} className="hero-avatar-rect" />
-                    </div>
-                    <div className="name-wrap">
-                        <h3 className="hero-name-highlight">{item.hero.name}</h3>
-                        <span className="score-badge">ĐIỂM: {item.totalScore}</span>
+    // Hàm render Card tướng, tự động nhận diện style dựa trên currentViewMode
+    const renderHeroCard = (item, filteredDetails, sectionId, currentViewMode) => {
+        const isSystem = filteredDetails.some(d => d.isSystem);
+        
+        let cardClass = 'sys-card';
+        if (currentViewMode === 'custom' || (!isSystem && currentViewMode === 'compare')) cardClass = 'user-card';
+        if (currentViewMode === 'community') cardClass = 'community-card';
+
+        return (
+            <div key={`${sectionId}-${item.hero._id}`} className={`counter-card-neon ${cardClass}`} style={currentViewMode === 'community' ? { borderLeft: '4px solid #10b981' } : {}}>
+                <div className="card-header">
+                    <div className="hero-info">
+                        <div className="avatar-frame">
+                            <img src={getImgUrl(item.hero.avatar)} alt={item.hero.name} className="hero-avatar-rect" />
+                        </div>
+                        <div className="name-wrap">
+                            <h3 className="hero-name-highlight">{item.hero.name}</h3>
+                            <span className="score-badge">ĐIỂM: {item.totalScore}</span>
+                        </div>
                     </div>
                 </div>
-            </div>
-            <div className="card-body">
-                {filteredDetails.map((detail, idx) => (
-                    <div key={`detail-${item.hero._id}-${idx}`} className="matchup-detail-box">
-                        <p className="detail-note">“{detail.note}”</p>
-                        {detail.counterItems?.length > 0 && (
-                            <div className="items-row">
-                                {detail.counterItems.map((it, iIdx) => (
-                                    <div key={`item-${it._id || iIdx}`} className="item-gaming-card" title={it.passive}>
-                                        <div className="item-icon-wrap">
-                                            <img src={getImgUrl(it.icon, 'item')} alt={it.name} />
+                <div className="card-body">
+                    {filteredDetails.map((detail, idx) => (
+                        <div key={`detail-${item.hero._id}-${idx}`} className="matchup-detail-box">
+                            <p className="detail-note">“{detail.note}”</p>
+                            {detail.counterItems?.length > 0 && (
+                                <div className="items-row">
+                                    {detail.counterItems.map((it, iIdx) => (
+                                        <div key={`item-${it._id || iIdx}`} className="item-gaming-card" title={it.passive}>
+                                            <div className="item-icon-wrap">
+                                                <img src={getImgUrl(it.icon, 'item')} alt={it.name} />
+                                            </div>
                                         </div>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-                        {!isSystemSide && <div className="author-tag">CHIẾN THUẬT CỦA BẠN</div>}
-                    </div>
-                ))}
+                                    ))}
+                                </div>
+                            )}
+                            
+                            {/* Hiển thị Nguồn/Tác giả tùy theo chế độ */}
+                            {currentViewMode === 'custom' && <div className="author-tag" style={{ color: '#f59e0b' }}>CHIẾN THUẬT CỦA BẠN</div>}
+                            {(currentViewMode === 'compare' && !detail.isSystem) && <div className="author-tag" style={{ color: '#f59e0b' }}>CHIẾN THUẬT CỦA BẠN</div>}
+                            {currentViewMode === 'community' && (
+                                <div className="author-tag" style={{ color: '#10b981', fontSize: '11px', marginTop: '5px', fontWeight: 'bold' }}>
+                                    BỞI: {detail.authorName || 'Người chơi'}
+                                </div>
+                            )}
+                        </div>
+                    ))}
+                </div>
             </div>
-        </div>
-    );
+        );
+    };
 
     return (
         <div className="solo-counter-multi">
@@ -92,7 +109,19 @@ const SoloCounter = ({ heroes }) => {
 
             <div className="sections-list">
                 {sections.map((section, index) => {
-                    // Tách kết quả dựa trên trường isSystem và authorId (từ backend mới sửa)
+                    // LỌC 1: Cho chế độ hiển thị lưới đơn (Standard, Custom, Community)
+                    const singleViewHeroes = section.results.map(h => ({
+                        ...h,
+                        matchupDetails: h.matchupDetails.filter(d => {
+                            const authorId = d.authorId || d.author?._id || d.author;
+                            if (viewMode === 'standard') return d.isSystem;
+                            if (viewMode === 'custom') return authorId === user?.id;
+                            if (viewMode === 'community') return !d.isSystem;
+                            return false;
+                        })
+                    })).filter(h => h.matchupDetails.length > 0);
+
+                    // LỌC 2: Riêng cho chế độ Compare (So sánh chéo)
                     const systemSideHeroes = section.results.map(h => ({
                         ...h,
                         matchupDetails: h.matchupDetails.filter(d => d.isSystem)
@@ -100,10 +129,7 @@ const SoloCounter = ({ heroes }) => {
 
                     const mySideHeroes = section.results.map(h => ({
                         ...h,
-                        matchupDetails: h.matchupDetails.filter(d => {
-                            // Lọc kèo không phải hệ thống VÀ thuộc về User hiện tại
-                            return !d.isSystem && (d.authorId === user?.id || d.author === user?.id);
-                        })
+                        matchupDetails: h.matchupDetails.filter(d => !d.isSystem && (d.authorId === user?.id || d.author === user?.id))
                     })).filter(h => h.matchupDetails.length > 0);
 
                     return (
@@ -112,9 +138,10 @@ const SoloCounter = ({ heroes }) => {
                                 <span className="section-number">#{index + 1}</span>
                                 <div className="section-input-group">
                                     <HeroSelect 
-                                        label="MỤC TIÊU:" 
+                                        label="MỤC TIÊU KHẮC CHẾ:" 
                                         heroes={heroes} 
                                         selectedHeroId={section.enemyHeroId} 
+                                        isEnemy={true}
                                         onChange={(id) => updateEnemyId(section.id, id)} 
                                     />
                                     <button className="btn-cyber btn-analyze-small" onClick={() => handleAnalyze(section.id)} disabled={section.loading}>
@@ -128,29 +155,40 @@ const SoloCounter = ({ heroes }) => {
                                 {section.loading ? (
                                     <div className="cyber-scanning-mini"><div className="scan-line"></div><p>TRUY XUẤT DỮ LIỆU...</p></div>
                                 ) : section.results.length > 0 ? (
-                                    <div className="comparison-container">
-                                        <div className="comparison-col system-side">
-                                            <h4 className="side-title">🤖 DỮ LIỆU HỆ THỐNG</h4>
-                                            <div className="side-grid">
-                                                {systemSideHeroes.length > 0 
-                                                    ? systemSideHeroes.map(h => renderHeroCard(h, h.matchupDetails, true, section.id)) 
-                                                    : <p className="no-data">Hệ thống chưa có dữ liệu kèo này.</p>}
+                                    viewMode === 'compare' ? (
+                                        // GIAO DIỆN CHIA 2 CỘT (CHỈ DÀNH CHO COMPARE)
+                                        <div className="comparison-container">
+                                            <div className="comparison-col system-side">
+                                                <h4 className="side-title">🤖 DỮ LIỆU HỆ THỐNG</h4>
+                                                <div className="side-grid">
+                                                    {systemSideHeroes.length > 0 
+                                                        ? systemSideHeroes.map(h => renderHeroCard(h, h.matchupDetails, section.id, 'compare')) 
+                                                        : <p className="no-data">Hệ thống chưa có dữ liệu kèo này.</p>}
+                                                </div>
                                             </div>
-                                        </div>
 
-                                        <div className="comparison-col community-side">
-                                            <h4 className="side-title">🛡️ CHIẾN THUẬT CỦA TÔI</h4>
-                                            <div className="side-grid">
-                                                {user ? (
-                                                    mySideHeroes.length > 0 
-                                                        ? mySideHeroes.map(h => renderHeroCard(h, h.matchupDetails, false, section.id)) 
-                                                        : <p className="no-data">Bạn chưa lưu chiến thuật nào cho kèo này.</p>
-                                                ) : (
-                                                    <p className="no-data">Đăng nhập để xem chiến thuật cá nhân.</p>
-                                                )}
+                                            <div className="comparison-col community-side">
+                                                <h4 className="side-title">🛡️ CHIẾN THUẬT CỦA TÔI</h4>
+                                                <div className="side-grid">
+                                                    {user ? (
+                                                        mySideHeroes.length > 0 
+                                                            ? mySideHeroes.map(h => renderHeroCard(h, h.matchupDetails, section.id, 'compare')) 
+                                                            : <p className="no-data">Bạn chưa lưu chiến thuật nào cho kèo này.</p>
+                                                    ) : (
+                                                        <p className="no-data">Đăng nhập để xem chiến thuật cá nhân.</p>
+                                                    )}
+                                                </div>
                                             </div>
                                         </div>
-                                    </div>
+                                    ) : (
+                                        // GIAO DIỆN CHỈ 1 GRID LIỀN MẠCH (DÀNH CHO STANDARD, CUSTOM, COMMUNITY)
+                                        <div className="single-view-container side-grid" style={{ marginTop: '20px' }}>
+                                            {singleViewHeroes.length > 0
+                                                ? singleViewHeroes.map(h => renderHeroCard(h, h.matchupDetails, section.id, viewMode))
+                                                : <p className="no-data" style={{ gridColumn: '1 / -1', textAlign: 'center' }}>Không có dữ liệu khắc chế cho chế độ này.</p>
+                                            }
+                                        </div>
+                                    )
                                 ) : (
                                     <div className="empty-section-msg">Chọn mục tiêu để bắt đầu phân tích.</div>
                                 )}

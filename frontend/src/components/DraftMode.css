@@ -240,3 +240,74 @@
     font-weight: bold;
 }
 
+/* =========================================
+   CÁC TÙY CHỈNH MỚI CHO BẢNG PHÂN TÍCH
+========================================= */
+
+/* Mini Avatar gắn liền với dòng chữ Khắc chế */
+.mini-inline-avatar {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    object-fit: cover;
+    vertical-align: middle;
+    margin: 0 6px;
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
+}
+
+/* Fix lỗi lệch dòng khi có icon */
+.rec-details-list li {
+    display: block;
+    line-height: 1.8;
+}
+
+/* =========================================
+   GIAO DIỆN SO SÁNH CHÉO (SPLIT LAYOUT)
+========================================= */
+.compare-split-layout {
+    display: flex;
+    gap: 30px;
+    margin-top: 15px;
+}
+
+.compare-col {
+    flex: 1;
+    background: rgba(15, 23, 42, 0.5);
+    padding: 20px;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.compare-col.system-col {
+    border-top: 3px solid #38bdf8;
+    box-shadow: inset 0 10px 30px rgba(56, 189, 248, 0.05);
+}
+
+.compare-col.personal-col {
+    border-top: 3px solid #10b981;
+    box-shadow: inset 0 10px 30px rgba(16, 185, 129, 0.05);
+}
+
+.compare-sub-title {
+    margin-top: 0;
+    margin-bottom: 20px;
+    font-family: 'Oswald', sans-serif;
+    color: #e2e8f0;
+    font-size: 16px;
+    letter-spacing: 1px;
+    border-bottom: 1px solid #334155;
+    padding-bottom: 10px;
+    text-align: center;
+}
+
+/* Ghi đè lại Grid khi ở trong chế độ chia cột để tránh bị bóp méo thẻ card */
+.compare-col .recommendation-grid {
+    grid-template-columns: 1fr; /* Ép thẻ trải dài hết 1 cột */
+}
+
+@media (max-width: 1024px) {
+    .compare-split-layout {
+        flex-direction: column;
+    }
+}
