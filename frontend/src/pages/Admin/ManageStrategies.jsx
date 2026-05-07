@@ -24,6 +24,7 @@ const ManageStrategies = () => {
         type: 'combo_counter',
         teamA: [null, null],
         teamB: [null, null],
+        score: 5, // <-- THÊM DÒNG NÀY
         note: '',
         counterItems: []
     });
@@ -92,6 +93,7 @@ const ManageStrategies = () => {
                 type: formData.type,
                 teamA: validTeamA,
                 teamB: formData.type === 'synergy' ? [] : validTeamB,
+                score: formData.score,
                 note: formData.note,
                 counterItems: formData.counterItems,
                 author: user?.id
@@ -99,9 +101,19 @@ const ManageStrategies = () => {
             await createStrategy(payload);
             alert("✅ Đã ghi danh chiến thuật vào hệ thống!");
 
-            // Xóa form và tải lại
-            setFormData({ ...formData, note: '', counterItems: [] });
-            handleTypeChange(formData.type);
+            // TỐI ƯU HÓA: Reset sạch sẽ toàn bộ Form trong 1 lần duy nhất
+            const resetTeamA = formData.type === 'skill_matchup' ? [null] : [null, null];
+            const resetTeamB = formData.type === 'synergy' ? [] : (formData.type === 'skill_matchup' ? [null] : [null, null]);
+
+            setFormData({
+                type: formData.type,
+                teamA: resetTeamA,
+                teamB: resetTeamB,
+                score: 5,
+                note: '',
+                counterItems: []
+            });
+
             loadData();
         } catch (err) {
             alert(err.response?.data?.message || "Lỗi tạo chiến thuật");
@@ -204,6 +216,22 @@ const ManageStrategies = () => {
                         </div>
                     </div>
 
+                    {/* THANH CHỌN ĐIỂM CHIẾN THUẬT */}
+                    <div className="score-picker-row" style={{ marginTop: '25px', textAlign: 'center', background: 'rgba(0,0,0,0.2)', padding: '15px', borderRadius: '12px', border: '1px solid #334155' }}>
+                        <span className="slot-title yellow">ĐÁNH GIÁ ĐỘ HIỆU QUẢ CỦA CHIẾN THUẬT NÀY (1-5)</span>
+                        <div className="cyber-score-bar" style={{ justifyContent: 'center', marginTop: '10px' }}>
+                            {[1, 2, 3, 4, 5].map(num => (
+                                <button
+                                    key={num} type="button"
+                                    className={`score-node ${formData.score === num ? 'active' : ''}`}
+                                    onClick={() => setFormData({ ...formData, score: num })}
+                                >
+                                    {num}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
                     <div className="form-bottom-row" style={{ marginTop: '20px' }}>
                         <div className="textarea-wrap" style={{ flex: 2 }}>
                             <label className="slot-title">PHÂN TÍCH CÁCH VẬN HÀNH:</label>
@@ -254,7 +282,10 @@ const ManageStrategies = () => {
                         filteredStrategies.map(strat => (
                             <div key={strat._id} className={`strategy-card border-${viewMode}`}>
                                 <div className="strat-header">
-                                    <span className="strat-type-badge">{getStrategyTitle(strat.type)}</span>
+                                    <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                                        <span className="strat-type-badge">{getStrategyTitle(strat.type)}</span>
+                                        <span className="score-badge">ĐIỂM: {strat.score || 5}</span>
+                                    </div>
                                     <button className="btn-del-mini" onClick={() => handleDelete(strat._id)}>🗑️</button>
                                 </div>
 
@@ -268,7 +299,7 @@ const ManageStrategies = () => {
                                             </div>
                                         ))}
                                     </div>
-                                    
+
                                     {/* BÊN PHẢI: ĐỐI THỦ */}
                                     {strat.type !== 'synergy' && (
                                         <>

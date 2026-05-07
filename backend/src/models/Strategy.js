@@ -13,6 +13,7 @@ const strategySchema = new mongoose.Schema({
     
     // Đội B (Đối đầu. Nếu type là 'synergy' thì teamB có thể rỗng)
     teamB: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Hero' }],
+    score: { type: Number, required: true, min: 1, max: 5, default: 5 },
     
     note: { type: String, required: true },
     

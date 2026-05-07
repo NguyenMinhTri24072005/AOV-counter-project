@@ -267,6 +267,12 @@ const DraftMode = ({ heroes }) => {
                         <div key={strat._id} className="strat-advanced-card" style={{ borderLeftColor: themeColor }}>
                             <div className="adv-card-header">
                                 <span className="adv-type">{strat.type === 'skill_matchup' ? '⚔️ 50/50' : (strat.type === 'synergy' ? '🤝 COMBO' : '🛡️ KHẮC CHẾ')}</span>
+
+                                {/* HIỂN THỊ ĐIỂM SỐ TẠI ĐÂY */}
+                                <span className="score-badge" style={{ background: isThreatBox ? '#ef4444' : '#f59e0b', color: isThreatBox ? '#fff' : '#000', margin: 0 }}>
+                                    {isThreatBox ? 'NGUY HIỂM: ' : 'ĐIỂM: '} {strat.score || 5}
+                                </span>
+                                
                                 <span className="adv-author">Bởi: {strat.isSystem ? 'Hệ thống' : strat.author?.username}</span>
                             </div>
                             <div className="adv-teams">
