@@ -60,6 +60,7 @@ const getRecommendations = async (req, res) => {
 
             // Tìm đoạn code này (khoảng dòng 259 trong file kết hợp)
             counterMap[counterId].matchupDetails.push({
+                _id: match._id,
                 enemyId: match.enemyHeroId,
                 score: match.score,
                 note: match.note,
