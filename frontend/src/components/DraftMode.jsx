@@ -16,11 +16,11 @@ const DraftMode = ({ heroes }) => {
     const { user } = useContext(AuthContext);
     const [viewMode, setViewMode] = useState('standard');
 
-    // Mảng cố định số lượng ô. Ô trống mang giá trị null
-    const [bansEnemy, setBansEnemy] = useState([null, null, null, null]); // 4 Cấm Địch
-    const [bansAlly, setBansAlly] = useState([null, null, null]);       // 3 Cấm Ta
-    const [picksEnemy, setPicksEnemy] = useState([null, null, null, null, null]); // 5 Chọn Địch
-    const [picksAlly, setPicksAlly] = useState([null, null, null, null, null]);   // 5 Chọn Ta
+    // CẬP NHẬT: Đã đưa cả 2 bên về 4 ô Cấm (Array 4 phần tử null)
+    const [bansEnemy, setBansEnemy] = useState([null, null, null, null]); 
+    const [bansAlly, setBansAlly] = useState([null, null, null, null]);   
+    const [picksEnemy, setPicksEnemy] = useState([null, null, null, null, null]); 
+    const [picksAlly, setPicksAlly] = useState([null, null, null, null, null]);   
 
     // Ghi nhớ Ô nào (index) và Loại nào (ban/pick) đang được bấm để gán tướng
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -66,7 +66,7 @@ const DraftMode = ({ heroes }) => {
 
     // Xóa tướng khỏi ô (Trả ô về giá trị null)
     const handleRemoveHero = (type, index, e) => {
-        e.stopPropagation(); // Ngăn chặn click lan ra ngoài gây mở Popup
+        e.stopPropagation(); 
         if (type === 'banEnemy') {
             const newArr = [...bansEnemy]; newArr[index] = null; setBansEnemy(newArr);
         } else if (type === 'banAlly') {
@@ -105,22 +105,20 @@ const DraftMode = ({ heroes }) => {
     const isEnemyCounteredByAlly = (enemyId) => allEnemyCounters.some(c => validPicksAlly.includes(c.hero._id) && c.matchupDetails.some(d => d.enemyId === enemyId));
     const isAllyCounteredByEnemy = (allyId) => allAllyCounters.some(c => validPicksEnemy.includes(c.hero._id) && c.matchupDetails.some(d => d.enemyId === allyId));
 
+    const getHeroName = (id) => heroes.find(h => h._id === id)?.name || "Unknown";
+    const getHeroAvatar = (id) => heroes.find(h => h._id === id)?.avatar || "";
+
     const excludedFromRecommendations = [...validBansEnemy, ...validBansAlly, ...validPicksEnemy];
     const recommendedToPick = allEnemyCounters.filter(item => !excludedFromRecommendations.includes(item.hero._id));
 
     const excludedFromThreats = [...validBansEnemy, ...validBansAlly, ...validPicksAlly];
     const threatsToOurTeam = allAllyCounters.filter(item => !excludedFromThreats.includes(item.hero._id));
 
-    const getHeroName = (id) => heroes.find(h => h._id === id)?.name || "Unknown";
-    const getHeroAvatar = (id) => heroes.find(h => h._id === id)?.avatar || "";
-
-    // COMPONENT CON: Ô hiển thị tướng trên bàn cờ
     const SlotBox = ({ type, id, index, highlightClass }) => {
         if (!id) return (
             <div 
                 className={`slot-box empty ${type}`} 
                 onClick={() => openModalFor(type, index)}
-                style={{ cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center', borderStyle: 'dashed', borderColor: '#aaa', backgroundColor: '#f9f9f9', transition: 'all 0.2s' }}
                 title="Bấm để chọn tướng"
             >
                 <span style={{ fontSize: '28px', color: '#ccc', fontWeight: 'bold' }}>+</span>
@@ -132,17 +130,16 @@ const DraftMode = ({ heroes }) => {
                 className={`slot-box filled ${type} ${highlightClass || ''}`} 
                 onClick={() => openModalFor(type, index)} 
                 title="Bấm để đổi tướng"
-                style={{ position: 'relative', overflow: 'hidden', cursor: 'pointer', transition: 'transform 0.2s' }}
             >
                 <img 
                     src={getAvatarUrl(getHeroAvatar(id))} 
                     alt="Hero" 
-                    style={{ position: 'absolute', width: '100%', height: '100%', objectFit: 'cover', opacity: 0.35, top: 0, left: 0, zIndex: 1, borderRadius: '4px' }} 
+                    className="slot-img-bg"
                 />
-                <span className="hero-name" style={{ zIndex: 2, position: 'relative', fontWeight: 'bold', textShadow: '0px 1px 3px rgba(0,0,0,0.8)', color: '#fff' }}>
+                <span className="hero-name">
                     {getHeroName(id)}
                 </span>
-                <button className="remove-btn" onClick={(e) => handleRemoveHero(type, index, e)} style={{ zIndex: 2, position: 'relative' }}>×</button>
+                <button className="remove-btn" onClick={(e) => handleRemoveHero(type, index, e)}>×</button>
             </div>
         );
     };
@@ -158,14 +155,14 @@ const DraftMode = ({ heroes }) => {
                 onSelect={handleSelectHero}
             />
 
-            {/* BÀN CỜ GIAO DIỆN MỚI */}
             <div className="draft-board-split" style={{ marginTop: '20px' }}>
+                {/* ĐỘI TA */}
                 <div className="team-col ally-col">
                     <h2 className="col-title ally-title">🛡️ ĐỘI TA</h2>
                     <div className="bans-row">
-                        <h4>Tướng Cấm (3)</h4>
+                        <h4>Tướng Cấm (4)</h4>
                         <div className="slots-container bans">
-                            {[0, 1, 2].map(i => (
+                            {[0, 1, 2, 3].map(i => (
                                 <SlotBox key={`ab-${i}`} type="banAlly" id={bansAlly[i]} index={i} />
                             ))}
                         </div>
@@ -182,6 +179,7 @@ const DraftMode = ({ heroes }) => {
                     </div>
                 </div>
 
+                {/* ĐỘI ĐỊCH */}
                 <div className="team-col enemy-col">
                     <h2 className="col-title enemy-title">⚔️ ĐỘI ĐỊCH</h2>
                     <div className="bans-row">
@@ -214,7 +212,7 @@ const DraftMode = ({ heroes }) => {
                             {recommendedToPick.map((rec) => {
                                 const isPickedByAlly = validPicksAlly.includes(rec.hero._id);
                                 return (
-                                    <div key={rec.hero._id} className="rec-card" style={{ border: isPickedByAlly ? '2px solid #28a745' : '1px solid #e0e0e0', display: 'flex', gap: '15px' }}>
+                                    <div key={rec.hero._id} className="rec-card" style={{ border: isPickedByAlly ? '2px solid #28a745' : '1px solid #334155', display: 'flex', gap: '15px' }}>
                                         <img src={getAvatarUrl(rec.hero.avatar)} style={{ width: '60px', height: '60px', borderRadius: '8px', objectFit: 'cover' }} alt="hero" />
                                         <div style={{ flex: 1 }}>
                                             <div className="rec-header" style={{ padding: 0, border: 'none', background: 'transparent' }}>
@@ -228,7 +226,7 @@ const DraftMode = ({ heroes }) => {
                                                             Khắc chế <b>{getHeroName(detail.enemyId)}</b> ({detail.score}đ)
                                                             <div className="rec-note">
                                                                 "{detail.note}"
-                                                                <div style={{ fontSize: '11px', marginTop: '3px', color: detail.isSystem ? '#007bff' : '#28a745', fontWeight: 'bold' }}>
+                                                                <div style={{ fontSize: '11px', marginTop: '3px', color: detail.isSystem ? '#38bdf8' : '#10b981', fontWeight: 'bold' }}>
                                                                     Nguồn: {detail.isSystem ? 'Hệ Thống' : detail.authorName}
                                                                 </div>
                                                             </div>
@@ -251,7 +249,7 @@ const DraftMode = ({ heroes }) => {
                             {threatsToOurTeam.map((threat) => {
                                 const isPickedByEnemy = validPicksEnemy.includes(threat.hero._id);
                                 return (
-                                    <div key={threat.hero._id} className="rec-card threat-card" style={{ border: isPickedByEnemy ? '2px solid #dc3545' : '1px solid #e0e0e0', display: 'flex', gap: '15px' }}>
+                                    <div key={threat.hero._id} className="rec-card threat-card" style={{ border: isPickedByEnemy ? '2px solid #dc3545' : '1px solid #334155', display: 'flex', gap: '15px' }}>
                                         <img src={getAvatarUrl(threat.hero.avatar)} style={{ width: '60px', height: '60px', borderRadius: '8px', objectFit: 'cover' }} alt="hero" />
                                         <div style={{ flex: 1 }}>
                                             <div className="rec-header threat-header" style={{ padding: 0, border: 'none', background: 'transparent' }}>
@@ -265,7 +263,7 @@ const DraftMode = ({ heroes }) => {
                                                             Khắc chế <b>{getHeroName(detail.enemyId)}</b> ({detail.score}đ)
                                                             <div className="rec-note">
                                                                 "{detail.note}"
-                                                                <div style={{ fontSize: '11px', marginTop: '3px', color: detail.isSystem ? '#007bff' : '#28a745', fontWeight: 'bold' }}>
+                                                                <div style={{ fontSize: '11px', marginTop: '3px', color: detail.isSystem ? '#38bdf8' : '#10b981', fontWeight: 'bold' }}>
                                                                     Nguồn: {detail.isSystem ? 'Hệ Thống' : detail.authorName}
                                                                 </div>
                                                             </div>

@@ -13,14 +13,14 @@ const ManageHeroes = () => {
     const [heroes, setHeroes] = useState([]);
     const [roles, setRoles] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
-    
+
     // STATE BỘ LỌC & TÌM KIẾM
     const [searchTerm, setSearchTerm] = useState('');
     const [roleFilter, setRoleFilter] = useState('');
     const [laneFilter, setLaneFilter] = useState('');
-    
+
     const initialForm = {
-        name: '', avatar: '', roles: [], lane: [], 
+        name: '', avatar: '', roles: [], lane: [],
         skills: { passive: '', skill1: '', skill2: '', skill3: '', skill4: '' }
     };
     const [formData, setFormData] = useState(initialForm);
@@ -94,10 +94,10 @@ const ManageHeroes = () => {
 
     const handleEditClick = (hero) => {
         setFormData({
-            name: hero.name, 
+            name: hero.name,
             avatar: hero.avatar || '',
             roles: hero.roles.map(r => r._id || r),
-            lane: hero.lane || [], 
+            lane: hero.lane || [],
             skills: hero.skills || initialForm.skills
         });
         setEditingId(hero._id);
@@ -112,49 +112,49 @@ const ManageHeroes = () => {
         }
     };
 
-    const cancelEdit = () => { 
-        setFormData(initialForm); 
-        setEditingId(null); 
-        setSelectedFile(null); 
-        setPreviewUrl(null); 
+    const cancelEdit = () => {
+        setFormData(initialForm);
+        setEditingId(null);
+        setSelectedFile(null);
+        setPreviewUrl(null);
     };
 
     return (
         <div className="manage-container">
             <h2>🦸 Quản lý danh sách Tướng</h2>
-            
+
             <form className={`admin-form ${editingId ? 'editing' : ''}`} onSubmit={handleSubmit}>
                 {editingId && <h4 className="edit-badge">Đang chỉnh sửa: {formData.name}</h4>}
-                
+
                 <div className="form-row align-start">
                     <div className="form-col">
-                        <input type="text" placeholder="Tên tướng" required 
-                            value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} />
-                        
+                        <input type="text" placeholder="Tên tướng" required
+                            value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} />
+
                         <div className="form-row">
-                            <input type="file" accept="image/*" onChange={handleFileChange} className="filter-input" style={{padding: '7px'}} />
-                            <input type="url" placeholder="Hoặc dán Link ảnh URL..." 
-                                value={formData.avatar} onChange={e => setFormData({...formData, avatar: e.target.value})} className="filter-input" />
+                            <input type="file" accept="image/*" onChange={handleFileChange} className="filter-input" style={{ padding: '7px' }} />
+                            <input type="url" placeholder="Hoặc dán Link ảnh URL..."
+                                value={formData.avatar} onChange={e => setFormData({ ...formData, avatar: e.target.value })} className="filter-input" />
                         </div>
                     </div>
 
                     <div className="preview-box">
                         <span className="preview-label">Xem trước</span>
-                        <img 
-                            src={previewUrl || getAvatarUrl(formData.avatar)} 
-                            alt="Preview" 
+                        <img
+                            src={previewUrl || getAvatarUrl(formData.avatar)}
+                            alt="Preview"
                             className="preview-img"
                         />
                     </div>
                 </div>
-                
+
                 <div className="checkbox-section">
                     <div className="checkbox-group checkbox-col">
                         <label>Vai trò (Roles):</label>
                         <div className="item-checkbox-list">
                             {roles.map(r => (
                                 <label key={r._id} className="item-checkbox-label">
-                                    <input type="checkbox" checked={formData.roles.includes(r._id)} onChange={() => handleRoleChange(r._id)} style={{marginRight: '5px'}}/> 
+                                    <input type="checkbox" checked={formData.roles.includes(r._id)} onChange={() => handleRoleChange(r._id)} style={{ marginRight: '5px' }} />
                                     {r.name}
                                 </label>
                             ))}
@@ -166,7 +166,7 @@ const ManageHeroes = () => {
                         <div className="item-checkbox-list">
                             {LANE_OPTIONS.map(lane => (
                                 <label key={lane} className="item-checkbox-label">
-                                    <input type="checkbox" checked={formData.lane.includes(lane)} onChange={() => handleLaneChange(lane)} style={{marginRight: '5px'}}/> 
+                                    <input type="checkbox" checked={formData.lane.includes(lane)} onChange={() => handleLaneChange(lane)} style={{ marginRight: '5px' }} />
                                     {lane}
                                 </label>
                             ))}
@@ -174,11 +174,11 @@ const ManageHeroes = () => {
                     </div>
                 </div>
 
-                <div className="skills-grid" style={{marginTop: '15px'}}>
-                    <textarea className="form-textarea" style={{marginTop: 0}} placeholder="Mô tả Nội tại" value={formData.skills.passive || ''} onChange={e => setFormData({...formData, skills: {...formData.skills, passive: e.target.value}})} />
-                    <textarea className="form-textarea" style={{marginTop: 0}} placeholder="Chiêu 1" value={formData.skills.skill1 || ''} onChange={e => setFormData({...formData, skills: {...formData.skills, skill1: e.target.value}})} />
-                    <textarea className="form-textarea" style={{marginTop: 0}} placeholder="Chiêu 2" value={formData.skills.skill2 || ''} onChange={e => setFormData({...formData, skills: {...formData.skills, skill2: e.target.value}})} />
-                    <textarea className="form-textarea" style={{marginTop: 0}} placeholder="Chiêu cuối" value={formData.skills.skill3 || ''} onChange={e => setFormData({...formData, skills: {...formData.skills, skill3: e.target.value}})} />
+                <div className="skills-grid" style={{ marginTop: '15px' }}>
+                    <textarea className="form-textarea" style={{ marginTop: 0 }} placeholder="Mô tả Nội tại" value={formData.skills.passive || ''} onChange={e => setFormData({ ...formData, skills: { ...formData.skills, passive: e.target.value } })} />
+                    <textarea className="form-textarea" style={{ marginTop: 0 }} placeholder="Chiêu 1" value={formData.skills.skill1 || ''} onChange={e => setFormData({ ...formData, skills: { ...formData.skills, skill1: e.target.value } })} />
+                    <textarea className="form-textarea" style={{ marginTop: 0 }} placeholder="Chiêu 2" value={formData.skills.skill2 || ''} onChange={e => setFormData({ ...formData, skills: { ...formData.skills, skill2: e.target.value } })} />
+                    <textarea className="form-textarea" style={{ marginTop: 0 }} placeholder="Chiêu cuối" value={formData.skills.skill3 || ''} onChange={e => setFormData({ ...formData, skills: { ...formData.skills, skill3: e.target.value } })} />
                 </div>
 
                 <div className="form-actions">
@@ -191,11 +191,11 @@ const ManageHeroes = () => {
 
             {/* BỘ LỌC TƯỚNG BÊN TRÊN LƯỚI GRID */}
             <div className="filter-bar">
-                <input 
-                    type="text" 
-                    placeholder="🔍 Tìm tên tướng..." 
-                    value={searchTerm} 
-                    onChange={e => setSearchTerm(e.target.value)} 
+                <input
+                    type="text"
+                    placeholder="🔍 Tìm tên tướng..."
+                    value={searchTerm}
+                    onChange={e => setSearchTerm(e.target.value)}
                     className="filter-input"
                 />
                 <select value={roleFilter} onChange={e => setRoleFilter(e.target.value)} className="filter-select">
@@ -215,17 +215,17 @@ const ManageHeroes = () => {
                         <div key={h._id} className="hero-card">
                             <img src={getAvatarUrl(h.avatar)} alt={h.name} className="hero-card-img" />
                             <span className="hero-card-name">{h.name}</span>
-                            
+
                             <div className="hero-card-roles">
                                 {h.roles?.map(r => r.name).join(', ')}
                             </div>
-                            
+
                             <div className="hero-card-lane">
                                 {h.lane?.join(', ') || 'Chưa xếp đường'}
                             </div>
 
                             <div className="hero-card-actions">
-                                <button className="btn-edit" onClick={() => handleEditClick(h)}>Sửa</button> 
+                                <button className="btn-edit" onClick={() => handleEditClick(h)}>Sửa</button>
                                 <button className="btn-del" onClick={() => handleDeleteClick(h._id)}>Xóa</button>
                             </div>
                         </div>

@@ -8,21 +8,20 @@ import DraftMode from './components/DraftMode';
 import { getHeroes } from './services/api';
 import './App.css';
 
-// --- IMPORT CÁC TRANG QUẢN TRỊ & CÁ NHÂN ---
 import AdminDashboard from './pages/Admin/AdminDashboard';
 import AdminRoute from './components/AdminRoute';
-import UserDashboard from './pages/User/UserDashboard'; // <-- IMPORT MỚI
+import UserDashboard from './pages/User/UserDashboard';
 
 const HomeTabs = ({ heroes }) => {
-    const [activeTab, setActiveTab] = useState('solo');
+    const [activeTab, setActiveTab] = useState('draft');
     return (
         <div>
             <div className="tabs-container">
-                <button className={`tab-button ${activeTab === 'solo' ? 'active' : ''}`} onClick={() => setActiveTab('solo')}>
-                    🔍 Solo Counter
-                </button>
                 <button className={`tab-button ${activeTab === 'draft' ? 'active' : ''}`} onClick={() => setActiveTab('draft')}>
-                    ⚔️ Draft Mode (Cấm/Chọn)
+                    ⚔️ Bàn Cờ Cấm Chọn
+                </button>
+                <button className={`tab-button ${activeTab === 'solo' ? 'active' : ''}`} onClick={() => setActiveTab('solo')}>
+                    🔍 Khắc Chế Cá Nhân
                 </button>
             </div>
             <div className="tab-content">
@@ -57,63 +56,46 @@ function App() {
 
     return (
         <div className="app-container">
-            {/* THANH ĐIỀU HƯỚNG (NAVBAR) */}
-            <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', paddingBottom: '10px', borderBottom: '2px solid #eee' }}>
-                <Link to="/" style={{ textDecoration: 'none' }}>
-                    <h1 style={{ color: '#333', margin: 0 }}>🛡️ Liên Quân Counter</h1>
+            {/* NAV BAR ESPORT STYLE */}
+            <header className="app-header-nav">
+                <Link to="/" className="logo-link">
+                    <h1 className="cyber-logo">AOV <span>COUNTER</span></h1>
                 </Link>
                 
-                <div>
+                <div className="user-controls">
                     {user ? (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-                            <span>Xin chào, <strong>{user.username}</strong> ({user.role === 'admin' ? '👑 Admin' : '👤 User'})</span>
+                        <div className="user-info-box">
+                            <span className="user-greeting">
+                                Xin chào, <strong className="highlight-text">{user.username}</strong>
+                            </span>
                             
-                            {/* NÚT VÀO TRANG CÁ NHÂN (Cho mọi User đã đăng nhập) */}
-                            <button 
-                                onClick={() => navigate('/profile')}
-                                style={{ padding: '6px 12px', background: '#28a745', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}
-                            >
-                                👤 Trang Cá Nhân
+                            <button className="btn-cyber btn-user" onClick={() => navigate('/profile')}>
+                                👤 Bí Kíp
                             </button>
 
-                            {/* NÚT VÀO DASHBOARD ADMIN (Chỉ Admin mới thấy) */}
                             {user.role === 'admin' && (
-                                <button 
-                                    onClick={() => navigate('/admin')}
-                                    style={{ padding: '6px 12px', background: '#17a2b8', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}
-                                >
-                                    👑 Quản Trị
+                                <button className="btn-cyber btn-admin" onClick={() => navigate('/admin')}>
+                                    👑 Hệ Thống
                                 </button>
                             )}
 
-                            <button onClick={handleLogout} style={{ padding: '6px 12px', background: '#dc3545', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>Đăng xuất</button>
+                            <button className="btn-cyber btn-logout" onClick={handleLogout}>Đăng xuất</button>
                         </div>
                     ) : (
-                        <div>
-                            <Link to="/login"><button style={{ padding: '6px 12px', marginRight: '10px', cursor: 'pointer' }}>Đăng Nhập</button></Link>
-                            <Link to="/register"><button style={{ padding: '6px 12px', background: '#007bff', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>Đăng Ký</button></Link>
+                        <div className="auth-buttons">
+                            <Link to="/login"><button className="btn-cyber btn-login">Đăng Nhập</button></Link>
+                            <Link to="/register"><button className="btn-cyber btn-register">Đăng Ký</button></Link>
                         </div>
                     )}
                 </div>
             </header>
 
-            {/* DANH SÁCH CÁC TRANG (ROUTER) */}
             <Routes>
                 <Route path="/" element={<HomeTabs heroes={heroes} />} />
                 <Route path="/login" element={<Login />} />
                 <Route path="/register" element={<Register />} />
-                
-                {/* Route cho User thường (Yêu cầu đăng nhập) */}
-                <Route path="/profile" element={
-                    user ? <UserDashboard /> : <Navigate to="/login" replace />
-                } />
-
-                {/* Route cho Admin (Yêu cầu quyền Admin) */}
-                <Route path="/admin" element={
-                    <AdminRoute>
-                        <AdminDashboard />
-                    </AdminRoute>
-                } />
+                <Route path="/profile" element={user ? <UserDashboard /> : <Navigate to="/login" replace />} />
+                <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
             </Routes>
         </div>
     );
