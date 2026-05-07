@@ -1,12 +1,12 @@
 const Matchup = require('../models/Matchup')
 
-const createMatchup = async (req,res) => {
+const createMatchup = async (req, res) => {
     try {
         const newMatchup = new Matchup(req.body);
         const savedMatchup = await newMatchup.save();
         res.status(201).json(savedMatchup)
-    } catch (errror){
-        res.status(500).json({message: 'lỗi khi tạo kèo đấu: ' + error.message})
+    } catch (errror) {
+        res.status(500).json({ message: 'lỗi khi tạo kèo đấu: ' + error.message })
     }
 }
 
@@ -14,10 +14,10 @@ const createMatchup = async (req,res) => {
 const getRecommendations = async (req, res) => {
     try {
         const { enemyIds, excludedIds = [], mode = 'standard', userId = null } = req.body;
-        
+
         // 1. Xây dựng bộ lọc Author dựa trên Mode
         let authorFilter = {};
-        
+
         // Giả sử bạn lấy được Admin ID từ DB hoặc Hardcode. 
         // Cách tốt nhất là tìm User có role 'admin'
         const Admin = await require('../models/User').findOne({ role: 'admin' });
@@ -32,13 +32,13 @@ const getRecommendations = async (req, res) => {
         }
 
         // 2. Tìm kèo với bộ lọc mở rộng
-        const matchups = await Matchup.find({ 
+        const matchups = await Matchup.find({
             enemyHeroId: { $in: enemyIds },
-            ...authorFilter 
+            ...authorFilter
         })
-        .populate('counterHeroId', 'name avatar role')
-        .populate('counterItems', 'name avatar passive')
-        .populate('author', 'username role'); // Thêm thông tin tác giả
+            .populate('counterHeroId', 'name avatar role')
+            .populate('counterItems', 'name avatar passive')
+            .populate('author', 'username role'); // Thêm thông tin tác giả
 
         const counterMap = {};
 
@@ -57,12 +57,14 @@ const getRecommendations = async (req, res) => {
 
             counterMap[counterId].totalScore += match.score;
             match.counterItems.forEach(item => counterMap[counterId].recommendedItems.add(item));
-            
+
+            // Tìm đoạn code này (khoảng dòng 259 trong file kết hợp)
             counterMap[counterId].matchupDetails.push({
                 enemyId: match.enemyHeroId,
                 score: match.score,
                 note: match.note,
-                authorName: match.author.username, // Hiển thị ai là người khuyên kèo này
+                authorName: match.author.username,
+                authorId: match.author._id, // THÊM DÒNG NÀY ĐỂ FRONTEND CÓ THỂ LỌC
                 isSystem: match.author.role === 'admin'
             });
         });
@@ -91,4 +93,4 @@ const deleteMatchup = async (req, res) => {
     } catch (error) { res.status(500).json({ message: error.message }); }
 };
 
-module.exports = {createMatchup, getRecommendations, getMyMatchups, deleteMatchup };
+module.exports = { createMatchup, getRecommendations, getMyMatchups, deleteMatchup };

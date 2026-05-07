@@ -16,13 +16,12 @@ const DraftMode = ({ heroes }) => {
     const { user } = useContext(AuthContext);
     const [viewMode, setViewMode] = useState('standard');
 
-    // CẬP NHẬT: Đã đưa cả 2 bên về 4 ô Cấm (Array 4 phần tử null)
+    // Mảng cố định 4 ô Cấm và 5 ô Chọn cho mỗi bên [cite: 916]
     const [bansEnemy, setBansEnemy] = useState([null, null, null, null]); 
     const [bansAlly, setBansAlly] = useState([null, null, null, null]);   
     const [picksEnemy, setPicksEnemy] = useState([null, null, null, null, null]); 
     const [picksAlly, setPicksAlly] = useState([null, null, null, null, null]);   
 
-    // Ghi nhớ Ô nào (index) và Loại nào (ban/pick) đang được bấm để gán tướng
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [targetAction, setTargetAction] = useState({ type: null, index: null });
 
@@ -30,7 +29,6 @@ const DraftMode = ({ heroes }) => {
     const [allAllyCounters, setAllAllyCounters] = useState([]);
     const [isAnalyzing, setIsAnalyzing] = useState(false);
 
-    // Lọc bỏ các ô null để lấy danh sách tướng thực tế đang có trên bàn cờ
     const validBansEnemy = bansEnemy.filter(Boolean);
     const validBansAlly = bansAlly.filter(Boolean);
     const validPicksEnemy = picksEnemy.filter(Boolean);
@@ -39,13 +37,11 @@ const DraftMode = ({ heroes }) => {
     const allExcluded = [...validBansEnemy, ...validBansAlly, ...validPicksEnemy, ...validPicksAlly];
     const availableHeroes = heroes.filter(hero => !allExcluded.includes(hero._id));
 
-    // Mở Popup và ghi nhớ vị trí ô
     const openModalFor = (type, index) => {
         setTargetAction({ type, index });
         setIsModalOpen(true);
     };
 
-    // Điền tướng vào ĐÚNG VỊ TRÍ ô đã bấm
     const handleSelectHero = (heroId) => {
         if (!heroId || targetAction.index === null) return;
         const { type, index } = targetAction;
@@ -64,9 +60,8 @@ const DraftMode = ({ heroes }) => {
         setTargetAction({ type: null, index: null });
     };
 
-    // Xóa tướng khỏi ô (Trả ô về giá trị null)
     const handleRemoveHero = (type, index, e) => {
-        e.stopPropagation(); 
+        e.stopPropagation(); // QUAN TRỌNG: Ngăn chặn click lan ra ngoài gây mở Modal [cite: 939]
         if (type === 'banEnemy') {
             const newArr = [...bansEnemy]; newArr[index] = null; setBansEnemy(newArr);
         } else if (type === 'banAlly') {
@@ -97,9 +92,7 @@ const DraftMode = ({ heroes }) => {
                 setIsAnalyzing(false);
             }
         };
-
         fetchAllRelations();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [picksEnemy, picksAlly, viewMode, user]); 
 
     const isEnemyCounteredByAlly = (enemyId) => allEnemyCounters.some(c => validPicksAlly.includes(c.hero._id) && c.matchupDetails.some(d => d.enemyId === enemyId));
@@ -114,6 +107,7 @@ const DraftMode = ({ heroes }) => {
     const excludedFromThreats = [...validBansEnemy, ...validBansAlly, ...validPicksAlly];
     const threatsToOurTeam = allAllyCounters.filter(item => !excludedFromThreats.includes(item.hero._id));
 
+    // COMPONENT Ô TƯỚNG ĐÃ TÁCH CẤU TRÚC ĐỂ NỔI NÚT X [cite: 925, 931]
     const SlotBox = ({ type, id, index, highlightClass }) => {
         if (!id) return (
             <div 
@@ -121,7 +115,7 @@ const DraftMode = ({ heroes }) => {
                 onClick={() => openModalFor(type, index)}
                 title="Bấm để chọn tướng"
             >
-                <span style={{ fontSize: '28px', color: '#ccc', fontWeight: 'bold' }}>+</span>
+                <span className="plus-icon">+</span>
             </div>
         );
 
@@ -131,14 +125,16 @@ const DraftMode = ({ heroes }) => {
                 onClick={() => openModalFor(type, index)} 
                 title="Bấm để đổi tướng"
             >
-                <img 
-                    src={getAvatarUrl(getHeroAvatar(id))} 
-                    alt="Hero" 
-                    className="slot-img-bg"
-                />
-                <span className="hero-name">
-                    {getHeroName(id)}
-                </span>
+                <div className="slot-image-container">
+                    <img 
+                        src={getAvatarUrl(getHeroAvatar(id))} 
+                        alt="Hero" 
+                        className="slot-img-bg"
+                    />
+                    <div className="slot-name-overlay">
+                        <span className="hero-name">{getHeroName(id)}</span>
+                    </div>
+                </div>
                 <button className="remove-btn" onClick={(e) => handleRemoveHero(type, index, e)}>×</button>
             </div>
         );
@@ -156,7 +152,7 @@ const DraftMode = ({ heroes }) => {
             />
 
             <div className="draft-board-split" style={{ marginTop: '20px' }}>
-                {/* ĐỘI TA */}
+                {/* ĐỘI TA [cite: 918, 919] */}
                 <div className="team-col ally-col">
                     <h2 className="col-title ally-title">🛡️ ĐỘI TA</h2>
                     <div className="bans-row">
@@ -179,7 +175,7 @@ const DraftMode = ({ heroes }) => {
                     </div>
                 </div>
 
-                {/* ĐỘI ĐỊCH */}
+                {/* ĐỘI ĐỊCH [cite: 920, 921] */}
                 <div className="team-col enemy-col">
                     <h2 className="col-title enemy-title">⚔️ ĐỘI ĐỊCH</h2>
                     <div className="bans-row">
@@ -203,7 +199,7 @@ const DraftMode = ({ heroes }) => {
                 </div>
             </div>
 
-            {/* BẢNG PHÂN TÍCH */}
+            {/* BẢNG PHÂN TÍCH [cite: 940, 941] */}
             <div className="analysis-container">
                 <div className="analysis-board board-recommend">
                     <h2>📊 Tướng Đề Xuất Khắc Chế Địch</h2>
@@ -223,7 +219,7 @@ const DraftMode = ({ heroes }) => {
                                                 <ul className="rec-details-list">
                                                     {rec.matchupDetails.map((detail, idx) => (
                                                         <li key={idx}>
-                                                            Khắc chế <b>{getHeroName(detail.enemyId)}</b> ({detail.score}đ)
+                                                            Khắc chế <b style={{color: '#f59e0b'}}>{getHeroName(detail.enemyId)}</b> ({detail.score}đ)
                                                             <div className="rec-note">
                                                                 "{detail.note}"
                                                                 <div style={{ fontSize: '11px', marginTop: '3px', color: detail.isSystem ? '#38bdf8' : '#10b981', fontWeight: 'bold' }}>
@@ -260,7 +256,7 @@ const DraftMode = ({ heroes }) => {
                                                 <ul className="rec-details-list">
                                                     {threat.matchupDetails.map((detail, idx) => (
                                                         <li key={idx}>
-                                                            Khắc chế <b>{getHeroName(detail.enemyId)}</b> ({detail.score}đ)
+                                                            Khắc chế <b style={{color: 'red'}}>{getHeroName(detail.enemyId)}</b> ({detail.score}đ)
                                                             <div className="rec-note">
                                                                 "{detail.note}"
                                                                 <div style={{ fontSize: '11px', marginTop: '3px', color: detail.isSystem ? '#38bdf8' : '#10b981', fontWeight: 'bold' }}>

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import './HeroModal.css';
 
 // HÀM HỖ TRỢ: Sửa lỗi đường dẫn ảnh (localhost hoặc link web)
@@ -12,6 +12,15 @@ const HeroModal = ({ isOpen, onClose, heroes, onSelect }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [roleFilter, setRoleFilter] = useState('');
     const [laneFilter, setLaneFilter] = useState('');
+
+    // RESET DỮ LIỆU KHI MỞ POPUP
+    useEffect(() => {
+        if (isOpen) {
+            setSearchTerm('');
+            setRoleFilter('');
+            setLaneFilter('');
+        }
+    }, [isOpen]);
 
     const allRoles = useMemo(() => {
         const roles = new Set();

@@ -58,7 +58,7 @@ function App() {
         <div className="app-container">
             {/* NAV BAR ESPORT STYLE */}
             <header className="app-header-nav">
-                <Link to="/" className="logo-link">
+                <Link to="/" className="logo-link" >
                     <h1 className="cyber-logo">AOV <span>COUNTER</span></h1>
                 </Link>
                 

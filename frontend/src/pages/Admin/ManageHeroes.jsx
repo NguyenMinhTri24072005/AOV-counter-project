@@ -178,7 +178,8 @@ const ManageHeroes = () => {
                     <textarea className="form-textarea" style={{ marginTop: 0 }} placeholder="Mô tả Nội tại" value={formData.skills.passive || ''} onChange={e => setFormData({ ...formData, skills: { ...formData.skills, passive: e.target.value } })} />
                     <textarea className="form-textarea" style={{ marginTop: 0 }} placeholder="Chiêu 1" value={formData.skills.skill1 || ''} onChange={e => setFormData({ ...formData, skills: { ...formData.skills, skill1: e.target.value } })} />
                     <textarea className="form-textarea" style={{ marginTop: 0 }} placeholder="Chiêu 2" value={formData.skills.skill2 || ''} onChange={e => setFormData({ ...formData, skills: { ...formData.skills, skill2: e.target.value } })} />
-                    <textarea className="form-textarea" style={{ marginTop: 0 }} placeholder="Chiêu cuối" value={formData.skills.skill3 || ''} onChange={e => setFormData({ ...formData, skills: { ...formData.skills, skill3: e.target.value } })} />
+                    <textarea className="form-textarea" style={{ marginTop: 0 }} placeholder="Chiêu 3" value={formData.skills.skill3 || ''} onChange={e => setFormData({ ...formData, skills: { ...formData.skills, skill3: e.target.value } })} />
+                    <textarea className="form-textarea" style={{ marginTop: 0 }} placeholder="Chiêu 4" value={formData.skills.skill4 || ''} onChange={e => setFormData({ ...formData, skills: { ...formData.skills, skill4: e.target.value } })} />
                 </div>
 
                 <div className="form-actions">
