@@ -239,7 +239,7 @@ const ManageStrategies = () => {
                                 onChange={e => setFormData({ ...formData, note: e.target.value })}
                                 placeholder={formData.type === 'synergy' ? "VD: Zata bay lên trời, Dolia buff chiêu cuối để Zata bay lần 2..." : "VD: Chờ đối phương xả hết khống chế rồi lao vào..."}
                                 className="form-textarea"
-                                style={{ height: '100px' }}
+                                style={{ height: '100px', width: '95%' }}
                             />
                         </div>
 
