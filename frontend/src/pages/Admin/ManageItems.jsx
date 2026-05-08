@@ -162,7 +162,7 @@ const ManageItems = () => {
                     <div className="form-col">
                         <div className="form-row">
                             <input type="file" accept="image/*" onChange={handleFileChange} className="filter-input" style={{ padding: '7px' }} />
-                            <input type="url" placeholder="Hoặc dán Link ảnh URL..."
+                            <input type="text" placeholder="Hoặc dán Link ảnh URL..."
                                 value={formData.icon} onChange={e => setFormData({ ...formData, icon: e.target.value })} className="filter-input" />
                         </div>
                         <textarea className="form-textarea" style={{ marginTop: 0 }} placeholder="Mô tả Nội tại của trang bị..."
