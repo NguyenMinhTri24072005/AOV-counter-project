@@ -1,5 +1,6 @@
 import axios from 'axios';
 
+
 const apiClient = axios.create({
     baseURL: 'http://localhost:5000/api',
     headers: {
@@ -56,6 +57,9 @@ export const deleteMatchup = (id) => apiClient.delete(`/matchups/${id}`);
 export const uploadImage = (formData) => apiClient.post('/upload', formData, {
     headers: { 'Content-Type': 'multipart/form-data' }
 });
+
+export const updateMatchup = (id, data) => apiClient.put(`/matchups/${id}`, data);
+export const updateStrategy = (id, data) => apiClient.put(`/strategies/${id}`, data);
 // ==========================================
 // THÊM MỚI: API CHO CHIẾN THUẬT NÂNG CAO (STRATEGY)
 // ==========================================

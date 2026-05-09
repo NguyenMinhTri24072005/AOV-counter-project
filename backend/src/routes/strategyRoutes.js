@@ -1,7 +1,8 @@
 const express = require('express');
 const router = express.Router();
-const { createStrategy, getStrategies, getMyStrategies, deleteStrategy } = require('../controllers/strategyController');
-const { verifyToken } = require('../middleware/auth'); // SỬA TẠI ĐÂY: Đổi protect thành verifyToken cho khớp với auth.js
+// Đã import trực tiếp updateStrategy ở đây
+const { createStrategy, getStrategies, getMyStrategies, deleteStrategy, updateStrategy } = require('../controllers/strategyController');
+const { verifyToken } = require('../middleware/auth'); 
 
 // Lấy danh sách tổng hợp (Không bắt buộc đăng nhập để xem hệ thống/cộng đồng)
 router.post('/filter', getStrategies);
@@ -10,5 +11,8 @@ router.post('/filter', getStrategies);
 router.post('/', verifyToken, createStrategy);
 router.get('/my/:userId', verifyToken, getMyStrategies);
 router.delete('/:id', verifyToken, deleteStrategy);
+
+// ĐÃ SỬA LẠI DÒNG NÀY: Gọi trực tiếp updateStrategy
+router.put('/:id', verifyToken, updateStrategy);
 
 module.exports = router;

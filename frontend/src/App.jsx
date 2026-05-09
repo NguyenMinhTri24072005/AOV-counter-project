@@ -11,6 +11,8 @@ import './App.css';
 import AdminDashboard from './pages/Admin/AdminDashboard';
 import AdminRoute from './components/AdminRoute';
 import UserDashboard from './pages/User/UserDashboard';
+import HeroesPage from './pages/HeroesPage';
+import ItemsPage from './pages/ItemsPage';
 
 const HomeTabs = ({ heroes }) => {
     const [activeTab, setActiveTab] = useState('draft');
@@ -61,14 +63,24 @@ function App() {
                 <Link to="/" className="logo-link" >
                     <h1 className="cyber-logo">AOV <span>COUNTER</span></h1>
                 </Link>
-                
+
+                {/* 🌟 THÊM THANH ĐIỀU HƯỚNG TƯỚNG & TRANG BỊ Ở ĐÂY 🌟 */}
+                <nav className="public-nav-links" style={{ display: 'flex', gap: '25px', marginLeft: '30px', marginRight: 'auto', alignItems: 'center' }}>
+                    <Link to="/heroes" style={{ color: '#e2e8f0', textDecoration: 'none', fontWeight: 'bold', fontSize: '16px', letterSpacing: '1px', textTransform: 'uppercase' }} onMouseOver={(e) => e.target.style.color = '#3b82f6'} onMouseOut={(e) => e.target.style.color = '#e2e8f0'}>
+                        🛡️ Tướng
+                    </Link>
+                    <Link to="/items" style={{ color: '#e2e8f0', textDecoration: 'none', fontWeight: 'bold', fontSize: '16px', letterSpacing: '1px', textTransform: 'uppercase' }} onMouseOver={(e) => e.target.style.color = '#10b981'} onMouseOut={(e) => e.target.style.color = '#e2e8f0'}>
+                        ⚔️ Trang Bị
+                    </Link>
+                </nav>
+
                 <div className="user-controls">
                     {user ? (
                         <div className="user-info-box">
                             <span className="user-greeting">
                                 Xin chào, <strong className="highlight-text">{user.username}</strong>
                             </span>
-                            
+
                             <button className="btn-cyber btn-user" onClick={() => navigate('/profile')}>
                                 👤 Cá nhân
                             </button>
@@ -92,6 +104,8 @@ function App() {
 
             <Routes>
                 <Route path="/" element={<HomeTabs heroes={heroes} />} />
+                <Route path="/heroes" element={<HeroesPage />} /> 
+                <Route path="/items" element={<ItemsPage />} />   
                 <Route path="/login" element={<Login />} />
                 <Route path="/register" element={<Register />} />
                 <Route path="/profile" element={user ? <UserDashboard /> : <Navigate to="/login" replace />} />

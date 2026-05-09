@@ -60,11 +60,13 @@ const getRecommendations = async (req, res) => {
 
             // Gom nhóm chi tiết các tướng bị khắc chế
             counterMap[counterId].matchupDetails.push({
-                _id: match._id, // Quan trọng: Truyền _id để Frontend có thể gọi lệnh Xóa
+                _id: match._id,
                 enemyId: match.enemyHeroId,
                 score: match.score,
                 note: match.note,
-                authorName: match.author?.username,
+                // BỔ SUNG DÒNG NÀY ĐỂ LẤY ITEM CHO TÍNH NĂNG EDIT
+                counterItems: match.counterItems ? match.counterItems.map(i => i._id || i) : [], 
+                authorName: match.author?.username || 'Người dùng ẩn danh',
                 authorId: match.author?._id,
                 isSystem: match.author?.role === 'admin'
             });
@@ -94,4 +96,11 @@ const deleteMatchup = async (req, res) => {
     } catch (error) { res.status(500).json({ message: error.message }); }
 };
 
-module.exports = { createMatchup, getRecommendations, getMyMatchups, deleteMatchup };
+const updateMatchup = async (req, res) => {
+    try {
+        const updatedMatchup = await Matchup.findByIdAndUpdate(req.params.id, req.body, { new: true });
+        res.status(200).json(updatedMatchup);
+    } catch (error) { res.status(500).json({ message: error.message }); }
+};
+
+module.exports = { createMatchup, getRecommendations, getMyMatchups, deleteMatchup, updateMatchup };

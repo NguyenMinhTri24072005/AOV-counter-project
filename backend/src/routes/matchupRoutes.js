@@ -6,5 +6,6 @@ router.post('/', matchupController.createMatchup);
 router.post('/recommend', matchupController.getRecommendations)
 router.get('/user/:userId', matchupController.getMyMatchups);
 router.delete('/:id', matchupController.deleteMatchup);
+router.put('/:id', matchupController.updateMatchup); // Bổ sung dòng này
 
 module.exports = router;

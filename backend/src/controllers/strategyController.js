@@ -72,5 +72,12 @@ const deleteStrategy = async (req, res) => {
         res.status(500).json({ message: error.message }); 
     }
 };
+const updateStrategy = async (req, res) => {
+    try {
+        const updatedStrategy = await Strategy.findByIdAndUpdate(req.params.id, req.body, { new: true });
+        res.status(200).json(updatedStrategy);
+    } catch (error) { res.status(500).json({ message: error.message }); }
+};
+// Nhớ export updateStrategy nhé
 
-module.exports = { createStrategy, getStrategies, getMyStrategies, deleteStrategy };
+module.exports = { createStrategy, getStrategies, getMyStrategies, deleteStrategy, updateStrategy };
