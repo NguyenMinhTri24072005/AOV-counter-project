@@ -19,7 +19,11 @@ const strategySchema = new mongoose.Schema({
     
     // Trang bị khuyên dùng cho cả đội hình/combo này
     counterItems: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Item' }],
-    
+    visibility: { 
+        type: String, 
+        enum: ['public', 'private'], 
+        default: 'public' 
+    },
     author: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true }
 }, { timestamps: true });
 

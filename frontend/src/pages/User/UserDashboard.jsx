@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useContext, useMemo } from 'react';
 import { AuthContext } from '../../context/AuthContext';
-import { getHeroes, getItems, createMatchup, deleteMatchup, getCounters, uploadImage } from '../../services/api';
+import { getHeroes, getItems, createMatchup, deleteMatchup, getCounters, uploadImage, getUserProfile, updateUserInfo, changePassword } from '../../services/api';
 import HeroSelect from '../../components/HeroSelect';
 import ItemModal from '../../components/ItemModal';
-import ManageStrategies from '../Admin/ManageStrategies'; // IMPORT TAB CHIẾN THUẬT NÂNG CAO
+import ManageStrategies from '../Admin/ManageStrategies';
 import './UserDashboard.css';
 import '../Admin/Admin.css';
 
@@ -21,43 +21,35 @@ const UserDashboard = () => {
     const [isItemModalOpen, setIsItemModalOpen] = useState(false);
     const [loading, setLoading] = useState(true);
 
-    // STATE CHO TAB NAVIGATION
-    const [activeTab, setActiveTab] = useState('matchups'); // 'matchups' hoặc 'strategies'
+    const [activeTab, setActiveTab] = useState('matchups'); // 'matchups', 'strategies', 'profile'
 
-    // STATE CHO BỘ LỌC
     const [searchTerm, setSearchTerm] = useState('');
     const [roleFilter, setRoleFilter] = useState('');
     const [laneFilter, setLaneFilter] = useState('');
 
-    // STATE CHO PROFILE (Đổi mật khẩu & Avatar)
-    const [showPwdForm, setShowPwdForm] = useState(false);
-    const [pwdData, setPwdData] = useState({ oldPwd: '', newPwd: '' });
-    const [userAvatar, setUserAvatar] = useState(user?.avatar || ''); // Chờ backend có trường avatar
+    const [profileData, setProfileData] = useState({ username: '', email: '' });
+    const [pwdData, setPwdData] = useState({ oldPwd: '', newPwd: '', confirmPwd: '' });
+    const [userAvatar, setUserAvatar] = useState(user?.avatar || '');
 
     const [formData, setFormData] = useState({
-        enemyHeroId: '',
-        heroId: '',
-        score: 5,
-        note: '',
-        counterItems: []
+        enemyHeroId: '', heroId: '', score: 5, note: '', counterItems: []
     });
 
     useEffect(() => {
-        if (user) loadData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+        if (user) {
+            loadData();
+            loadProfile();
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [user]);
 
     const loadData = async () => {
         try {
             setLoading(true);
             const [hRes, iRes, mRes] = await Promise.all([
-                getHeroes(), 
-                getItems(), 
-                getCounters([], [], 'custom', user?.id)
+                getHeroes(), getItems(), getCounters([], [], 'custom', user?.id)
             ]);
-            setHeroes(hRes.data);
-            setItems(iRes.data);
-            setMyMatchups(mRes.data);
+            setHeroes(hRes.data); setItems(iRes.data); setMyMatchups(mRes.data);
         } catch (err) {
             console.error("Lỗi tải dữ liệu cá nhân:", err);
         } finally {
@@ -65,7 +57,15 @@ const UserDashboard = () => {
         }
     };
 
-    // LOGIC TRÍCH XUẤT ROLE & LANE TỪ DANH SÁCH TƯỚNG CHO DROPDOWN
+    const loadProfile = async () => {
+        try {
+            const res = await getUserProfile();
+            setProfileData({ username: res.data.username, email: res.data.email || '' });
+        } catch (error) {
+            console.error("Lỗi tải profile:", error);
+        }
+    };
+
     const allRoles = useMemo(() => {
         const roles = new Set();
         heroes.forEach(h => h.roles?.forEach(r => roles.add(r.name || r)));
@@ -78,40 +78,27 @@ const UserDashboard = () => {
         return Array.from(lanes);
     }, [heroes]);
 
-    // LOGIC LỌC DỮ LIỆU BÍ KÍP CÁ NHÂN
     const filteredResults = myMatchups.filter(group => {
         if (group.matchupDetails.length === 0) return false;
-        
         const fullHero = heroes.find(h => h._id === group.hero._id);
         const matchName = group.hero.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          group.matchupDetails.some(d => heroes.find(h => h._id === d.enemyId)?.name.toLowerCase().includes(searchTerm.toLowerCase()));
+            group.matchupDetails.some(d => heroes.find(h => h._id === d.enemyId)?.name.toLowerCase().includes(searchTerm.toLowerCase()));
         const matchRole = roleFilter ? fullHero?.roles?.some(r => (r.name || r) === roleFilter || r._id === roleFilter) : true;
         const matchLane = laneFilter ? fullHero?.lane?.includes(laneFilter) : true;
-
         return matchName && matchRole && matchLane;
     });
 
     const handleToggleItem = (itemId) => {
         setFormData(prev => ({
-            ...prev,
-            counterItems: prev.counterItems.includes(itemId)
-                ? prev.counterItems.filter(id => id !== itemId)
-                : [...prev.counterItems, itemId]
+            ...prev, counterItems: prev.counterItems.includes(itemId)
+                ? prev.counterItems.filter(id => id !== itemId) : [...prev.counterItems, itemId]
         }));
     };
 
-    const handleSubmit = async (e) => {
+    const handleSubmitMatchup = async (e) => {
         e.preventDefault();
         try {
-            const payload = { 
-                enemyHeroId: formData.enemyHeroId,
-                counterHeroId: formData.heroId, 
-                score: formData.score,
-                note: formData.note,
-                counterItems: formData.counterItems,
-                author: user?.id 
-            };
-            await createMatchup(payload);
+            await createMatchup({ ...formData, author: user?.id });
             alert("Đã thêm bí kíp mới!");
             setFormData({ enemyHeroId: '', heroId: '', score: 5, note: '', counterItems: [] });
             loadData();
@@ -123,14 +110,24 @@ const UserDashboard = () => {
     const handleDelete = async (id) => {
         if (!window.confirm("Bạn muốn xóa bí kíp này?")) return;
         try {
-            await deleteMatchup(id);
-            loadData();
-        } catch (err) {
-            alert("Lỗi khi xóa");
+            await deleteMatchup(id); loadData();
+        } catch (err) { alert("Lỗi khi xóa"); }
+    };
+
+    const handleUpdateProfile = async (e) => {
+        e.preventDefault();
+        try {
+            // Chỉ cập nhật Username và Email
+            await updateUserInfo(user.id || user._id, {
+                username: profileData.username,
+                email: profileData.email
+            });
+            alert("Cập nhật thông tin thành công!");
+        } catch (error) {
+            alert(error.response?.data?.message || "Lỗi cập nhật thông tin");
         }
     };
 
-    // XỬ LÝ ẢNH ĐẠI DIỆN VÀ MẬT KHẨU (UI)
     const handleAvatarChange = async (e) => {
         const file = e.target.files[0];
         if (!file) return;
@@ -139,36 +136,37 @@ const UserDashboard = () => {
             uploadData.append('image', file);
             const upRes = await uploadImage(uploadData);
             setUserAvatar(upRes.data.url);
-            alert("Đã tải ảnh lên thành công! (Cần cập nhật Backend để lưu vĩnh viễn)");
+            alert("Đã tải ảnh lên thành công!");
         } catch (error) {
             alert("Lỗi tải ảnh lên.");
         }
     };
 
-    const handlePasswordChange = (e) => {
+    const handlePasswordChange = async (e) => {
         e.preventDefault();
-        if (pwdData.oldPwd === pwdData.newPwd) {
-            return alert("Mật khẩu mới phải khác mật khẩu cũ!");
+        if (pwdData.newPwd !== pwdData.confirmPwd) {
+            return alert("Mật khẩu xác nhận không khớp!");
         }
-        alert("Gửi yêu cầu đổi mật khẩu thành công! (Cần cập nhật Backend để hoạt động thực tế)");
-        setPwdData({ oldPwd: '', newPwd: '' });
-        setShowPwdForm(false);
+        try {
+            await changePassword({ oldPassword: pwdData.oldPwd, newPassword: pwdData.newPwd });
+            alert("Đổi mật khẩu thành công!");
+            setPwdData({ oldPwd: '', newPwd: '', confirmPwd: '' });
+        } catch (error) {
+            alert(error.response?.data?.message || "Lỗi đổi mật khẩu");
+        }
     };
 
     return (
         <div className="user-dashboard-container">
-            {/* PHẦN 1: THÔNG TIN COMMANDER */}
+            {/* HEADER TỔNG QUAN */}
             <header className="user-profile-header">
                 <div className="profile-card">
-                    {/* Bọc Avatar trong label để click tải ảnh */}
                     <div className="profile-avatar-wrapper">
                         <label htmlFor="avatar-upload" className="avatar-upload-label" title="Đổi ảnh đại diện">
                             {userAvatar ? (
                                 <img src={getImgUrl(userAvatar)} alt="avatar" className="user-avatar-img" />
                             ) : (
-                                <div className="profile-avatar-text">
-                                    {user?.username?.charAt(0).toUpperCase()}
-                                </div>
+                                <div className="profile-avatar-text">{user?.username?.charAt(0).toUpperCase()}</div>
                             )}
                             <div className="avatar-overlay">📷</div>
                         </label>
@@ -176,7 +174,7 @@ const UserDashboard = () => {
                     </div>
 
                     <div className="profile-info">
-                        <h2>COACH: <span className="highlight-text">{user?.username}</span></h2>
+                        <h2>COACH: <span className="highlight-text">{profileData.username || user?.username}</span></h2>
                         <div className="profile-meta">
                             <span className="rank-tag">RANK: BẬC THẦY CHIẾN THUẬT</span>
                             <span className="date-tag">GIA NHẬP: {new Date().toLocaleDateString('vi-VN')}</span>
@@ -187,114 +185,151 @@ const UserDashboard = () => {
                 <div className="profile-actions-wrapper">
                     <div className="stat-box">
                         <span className="stat-value">{myMatchups.reduce((acc, curr) => acc + curr.matchupDetails.length, 0)}</span>
-                        <span className="stat-label">BÍ KÍP 1V1 ĐÃ LƯU</span>
+                        <span className="stat-label">BÍ KÍP ĐÃ LƯU</span>
                     </div>
-                    <button className="btn-cyber btn-pwd-toggle" onClick={() => setShowPwdForm(!showPwdForm)}>
-                        {showPwdForm ? 'ĐÓNG FORM' : '🔑 ĐỔI MẬT KHẨU'}
-                    </button>
                 </div>
             </header>
 
-            {/* FORM ĐỔI MẬT KHẨU */}
-            {showPwdForm && (
-                <div className="password-change-box">
-                    <h4>CẬP NHẬT MẬT KHẨU</h4>
-                    <form onSubmit={handlePasswordChange} className="pwd-form">
-                        <input type="password" placeholder="Nhập mật khẩu hiện tại..." required 
-                            value={pwdData.oldPwd} onChange={e => setPwdData({...pwdData, oldPwd: e.target.value})} />
-                        <input type="password" placeholder="Nhập mật khẩu mới..." required 
-                            value={pwdData.newPwd} onChange={e => setPwdData({...pwdData, newPwd: e.target.value})} />
-                        <button type="submit" className="btn-cyber btn-save-pwd">CẬP NHẬT</button>
-                    </form>
-                </div>
-            )}
-
             {/* ĐIỀU HƯỚNG TAB */}
-            <div className="user-tabs" style={{ display: 'flex', gap: '15px', marginBottom: '30px' }}>
-                <button 
-                    className="btn-cyber"
+            <div className="user-tabs-container">
+                <button
+                    className={`tab-btn tab-btn-matchups ${activeTab === 'matchups' ? 'active' : ''}`}
                     onClick={() => setActiveTab('matchups')}
-                    style={{ 
-                        flex: 1, padding: '15px', fontSize: '18px', fontWeight: 'bold', cursor: 'pointer', transition: '0.3s',
-                        background: activeTab === 'matchups' ? 'rgba(56, 189, 248, 0.15)' : 'rgba(15, 23, 42, 0.6)',
-                        border: `2px solid ${activeTab === 'matchups' ? '#38bdf8' : '#334155'}`,
-                        color: activeTab === 'matchups' ? '#38bdf8' : '#94a3b8'
-                    }}
                 >
-                    🔥 BÍ KÍP KHẮC CHẾ 1V1
+                    🔥 BÍ KÍP 1V1
                 </button>
-                <button 
-                    className="btn-cyber"
+                <button
+                    className={`tab-btn tab-btn-strategies ${activeTab === 'strategies' ? 'active' : ''}`}
                     onClick={() => setActiveTab('strategies')}
-                    style={{ 
-                        flex: 1, padding: '15px', fontSize: '18px', fontWeight: 'bold', cursor: 'pointer', transition: '0.3s',
-                        background: activeTab === 'strategies' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(15, 23, 42, 0.6)',
-                        border: `2px solid ${activeTab === 'strategies' ? '#10b981' : '#334155'}`,
-                        color: activeTab === 'strategies' ? '#10b981' : '#94a3b8'
-                    }}
                 >
-                    🧠 CHIẾN THUẬT NÂNG CAO (COMBO)
+                    🧠 CHIẾN THUẬT TEAM
+                </button>
+                <button
+                    className={`tab-btn tab-btn-profile ${activeTab === 'profile' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('profile')}
+                >
+                    ⚙️ QUẢN LÝ TÀI KHOẢN
                 </button>
             </div>
 
             {/* NỘI DUNG HIỂN THỊ TÙY THEO TAB */}
+            {activeTab === 'profile' && (
+                <section className="battlefield-form-box profile-setting-box">
+
+                    {/* --- FORM 1: CẬP NHẬT THÔNG TIN CƠ BẢN --- */}
+                    <h3 className="section-title profile-title">🛡️ THIẾT LẬP HỒ SƠ CHỈ HUY</h3>
+                    <form onSubmit={handleUpdateProfile} className="profile-form-layout">
+                        <div className="form-row">
+                            <div className="textarea-wrap form-col">
+                                <label className="slot-title yellow">TÊN CHỈ HUY (USERNAME):</label>
+                                <input type="text" value={profileData.username} required
+                                    onChange={e => setProfileData({ ...profileData, username: e.target.value })}
+                                    className="filter-input input-profile"
+                                />
+                            </div>
+                            <div className="textarea-wrap form-col">
+                                <label className="slot-title yellow">ĐỊA CHỈ EMAIL:</label>
+                                <input type="email" value={profileData.email} required
+                                    onChange={e => setProfileData({ ...profileData, email: e.target.value })}
+                                    className="filter-input input-profile"
+                                />
+                            </div>
+                        </div>
+                        <button type="submit" className="btn-cyber btn-save-profile">
+                            💾 LƯU THÔNG TIN CÁ NHÂN
+                        </button>
+                    </form>
+
+                    {/* ĐƯỜNG KẺ NGĂN CÁCH 2 FORM */}
+                    <hr style={{ borderColor: '#334155', margin: '40px 0 30px 0', borderStyle: 'dashed' }} />
+
+                    {/* --- FORM 2: ĐỔI MẬT KHẨU BẢO MẬT --- */}
+                    <h3 className="section-title profile-title" style={{ color: '#38bdf8', borderColor: '#38bdf8' }}>🔑 ĐỔI MẬT KHẨU BẢO MẬT</h3>
+                    <form onSubmit={handlePasswordChange} className="profile-form-layout pwd-update-box">
+                        <div className="form-row">
+                            <div className="textarea-wrap form-col">
+                                <label className="slot-title yellow">MẬT KHẨU CŨ:</label>
+                                <input type="password" required value={pwdData.oldPwd}
+                                    onChange={e => setPwdData({ ...pwdData, oldPwd: e.target.value })}
+                                    className="filter-input input-profile" placeholder="Nhập mật khẩu hiện tại..."
+                                />
+                            </div>
+                            <div className="textarea-wrap form-col">
+                                <label className="slot-title blue">MẬT KHẨU MỚI:</label>
+                                <input type="password" required value={pwdData.newPwd}
+                                    onChange={e => setPwdData({ ...pwdData, newPwd: e.target.value })}
+                                    className="filter-input input-profile" placeholder="Nhập mật khẩu mới..."
+                                />
+                            </div>
+                            <div className="textarea-wrap form-col">
+                                <label className="slot-title red">XÁC NHẬN MẬT KHẨU:</label>
+                                <input type="password" required value={pwdData.confirmPwd}
+                                    onChange={e => setPwdData({ ...pwdData, confirmPwd: e.target.value })}
+                                    className="filter-input input-profile" placeholder="Nhập lại mật khẩu mới..."
+                                />
+                            </div>
+                        </div>
+                        <button type="submit" className="btn-cyber btn-save-profile" style={{ background: '#38bdf8', color: '#000' }}>
+                            🔄 XÁC NHẬN ĐỔI MẬT KHẨU
+                        </button>
+                    </form>
+
+                </section>
+            )}
+
             {activeTab === 'matchups' && (
                 <>
-                    {/* PHẦN 2: CHIẾN TRƯỜNG MÔ PHỎNG (FORM TẠO KÈO 1V1) */}
                     <section className="battlefield-form-box">
                         <h3 className="section-title">➕ THÊM BÍ KÍP KHẮC CHẾ 1V1 MỚI</h3>
-                        <form onSubmit={handleSubmit} className="cyber-form-layout">
+                        <form onSubmit={handleSubmitMatchup} className="cyber-form-layout">
                             <div className="matchup-vs-display">
                                 <div className="slot-item">
                                     <span className="slot-title red">ĐỐI THỦ</span>
-                                    <HeroSelect heroes={heroes} selectedHeroId={formData.enemyHeroId} isEnemy={true} onChange={id => setFormData({...formData, enemyHeroId: id})} />
+                                    <HeroSelect heroes={heroes} selectedHeroId={formData.enemyHeroId} isEnemy={true} onChange={id => setFormData({ ...formData, enemyHeroId: id })} />
                                 </div>
                                 <div className="vs-logo">VS</div>
                                 <div className="slot-item">
                                     <span className="slot-title blue">TƯỚNG BẠN CHỌN</span>
-                                    <HeroSelect heroes={heroes} selectedHeroId={formData.heroId} onChange={id => setFormData({...formData, heroId: id})} />
+                                    <HeroSelect heroes={heroes} selectedHeroId={formData.heroId} onChange={id => setFormData({ ...formData, heroId: id })} />
                                 </div>
                                 <div className="score-picker-column">
                                     <span className="slot-title yellow">HIỆU QUẢ (1-5)</span>
                                     <div className="cyber-score-bar">
                                         {[1, 2, 3, 4, 5].map(num => (
-                                            <button 
-                                                key={num} type="button" 
-                                                className={`score-node ${formData.score === num ? 'active' : ''}`}
-                                                onClick={() => setFormData({...formData, score: num})}
-                                            >
+                                            <button key={num} type="button" className={`score-node ${formData.score === num ? 'active' : ''}`}
+                                                onClick={() => setFormData({ ...formData, score: num })}>
                                                 {num}
                                             </button>
                                         ))}
                                     </div>
                                 </div>
                             </div>
-                            
+
                             <div className="form-bottom-row">
-                                <div className="textarea-wrap" style={{ flex: 2 }}>
+                                <div className="textarea-wrap form-col flex-2">
                                     <label className="slot-title">MẸO KHẮC CHẾ:</label>
-                                    <textarea value={formData.note} required onChange={e => setFormData({...formData, note: e.target.value})} placeholder="VD: Florentino rất sợ bị khống chế cứng, hãy giữ chiêu..." className="form-textarea" style={{ height: '100px', width: "70%"}} />
+                                    <textarea value={formData.note} required onChange={e => setFormData({ ...formData, note: e.target.value })} placeholder="VD: Florentino rất sợ bị khống chế cứng..." className="form-textarea matchup-textarea" />
                                 </div>
-                                <div className="items-selector-wrap" style={{ flex: 1 }}>
+                                <div className="items-selector-wrap form-col">
                                     <label className="slot-title">TRANG BỊ ({formData.counterItems.length}):</label>
                                     <div className="selected-items-row">
-                                        <button type="button" className="btn-open-item-modal" onClick={() => setIsItemModalOpen(true)} style={{ width: '100%' }}>➕ Chọn Trang Bị</button>
-                                        <div className="mini-item-list" style={{ display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
+                                        <button type="button" className="btn-open-item-modal full-width" onClick={() => setIsItemModalOpen(true)}>➕ Chọn Trang Bị</button>
+                                        <div className="mini-item-list">
                                             {formData.counterItems.map(itemId => {
                                                 const it = items.find(i => i._id === itemId);
-                                                return <img key={itemId} src={getImgUrl(it?.icon)} alt="item" title={it?.name} className="match-item-icon" style={{ width: '38px', height: '38px', borderRadius: '6px' }} />;
+                                                return <img key={itemId} src={getImgUrl(it?.icon)} alt="item" title={it?.name} className="match-item-icon" />;
                                             })}
                                         </div>
                                     </div>
                                 </div>
                             </div>
-                            <button type="submit" className="btn-cyber btn-save-matchup" style={{ width: '100%', height: '50px', fontSize: '18px', background: '#10b981', color: '#000' }}>XÁC NHẬN LƯU VÀO BÍ KÍP 1V1</button>
+                            <button type="submit" className="btn-cyber btn-save-matchup">XÁC NHẬN LƯU VÀO BÍ KÍP 1V1</button>
                         </form>
                     </section>
 
-                    {/* BỘ LỌC TÌM KIẾM CHO BÍ KÍP CÁ NHÂN */}
-                    <div className="filter-bar" style={{ marginBottom: '25px', display: 'flex', gap: '15px', background: 'rgba(30, 41, 59, 0.8)', padding: '15px', borderRadius: '8px', border: '1px solid #334155' }}>
-                        <input type="text" placeholder="🔍 Tìm kiếm bí kíp (Địch hoặc Ta)..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="filter-input" style={{ flex: 1 }} />
+                    {/* BỘ LỌC TÌM KIẾM */}
+                    <div className="filter-bar filter-bar-user">
+                        <input type="text" placeholder="🔍 Tìm kiếm bí kíp..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="filter-input search-input" />
                         <select value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)} className="filter-select">
                             <option value="">🛡️ TẤT CẢ VAI TRÒ</option>
                             {allRoles.map(role => <option key={role} value={role}>{role}</option>)}
@@ -305,7 +340,7 @@ const UserDashboard = () => {
                         </select>
                     </div>
 
-                    {/* PHẦN 3: DANH SÁCH BÍ KÍP CÁ NHÂN */}
+                    {/* DANH SÁCH BÍ KÍP */}
                     <section className="personal-matchups-section">
                         <h3 className="section-title">📔 KHO BÍ KÍP 1V1 CỦA TÔI ({filteredResults.length})</h3>
                         {loading ? (
@@ -329,15 +364,15 @@ const UserDashboard = () => {
                                                     const enemyHero = heroes.find(h => h._id === d.enemyId);
                                                     return (
                                                         <div key={idx} className="detail-item-box">
-                                                            <div className="detail-item-header" style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                                                <div className="enemy-info-mini" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                                    <span style={{ fontSize: '13px', color: '#94a3b8' }}>Khắc chế:</span>
-                                                                    <img src={getImgUrl(enemyHero?.avatar)} alt="enemy" style={{ width: '25px', height: '25px', borderRadius: '50%' }} />
-                                                                    <strong style={{ color: '#ef4444' }}>{enemyHero?.name}</strong>
+                                                            <div className="detail-item-header">
+                                                                <div className="enemy-info-mini">
+                                                                    <span>Khắc chế:</span>
+                                                                    <img src={getImgUrl(enemyHero?.avatar)} alt="enemy" className="enemy-avatar-mini" />
+                                                                    <strong>{enemyHero?.name}</strong>
                                                                 </div>
                                                                 <button className="btn-del-mini" onClick={() => handleDelete(d._id)}>🗑️</button>
                                                             </div>
-                                                            <p className="note-text" style={{ fontStyle: 'italic', fontSize: '13px', color: '#cbd5e1', marginTop: '5px' }}>"{d.note}"</p>
+                                                            <p className="note-text">"{d.note}"</p>
                                                         </div>
                                                     );
                                                 })}
@@ -345,7 +380,7 @@ const UserDashboard = () => {
                                         </div>
                                     ))
                                 ) : (
-                                    <div className="empty-state-msg" style={{ gridColumn: '1 / -1' }}>
+                                    <div className="empty-state-msg">
                                         Không tìm thấy bí kíp nào khớp với bộ lọc của bạn.
                                     </div>
                                 )}
@@ -355,7 +390,6 @@ const UserDashboard = () => {
                 </>
             )}
 
-            {/* TAB CHIẾN THUẬT NÂNG CAO */}
             {activeTab === 'strategies' && (
                 <ManageStrategies />
             )}

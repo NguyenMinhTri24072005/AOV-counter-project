@@ -3,7 +3,9 @@
     animation: fadeIn 0.5s ease;
 }
 
-/* PROFILE HEADER */
+/* =========================================
+   1. PROFILE HEADER
+========================================= */
 .user-profile-header {
     display: flex;
     justify-content: space-between;
@@ -56,7 +58,7 @@
     align-items: center;
     font-size: 36px;
     font-weight: 900;
-    font-family: 'Oswald';
+    font-family: 'Oswald', sans-serif;
     color: #38bdf8;
     background: rgba(56, 189, 248, 0.1);
 }
@@ -81,7 +83,7 @@
 /* --- THÔNG TIN USER --- */
 .profile-info h2 {
     margin: 0 0 8px 0;
-    font-family: 'Oswald';
+    font-family: 'Oswald', sans-serif;
     letter-spacing: 1px;
 }
 
@@ -107,7 +109,6 @@
     align-items: center;
 }
 
-/* --- CỘT BÊN PHẢI (THỐNG KÊ & NÚT PWD) --- */
 .profile-actions-wrapper {
     display: flex;
     flex-direction: column;
@@ -129,7 +130,7 @@
     font-size: 24px;
     font-weight: 900;
     color: #38bdf8;
-    font-family: 'Oswald';
+    font-family: 'Oswald', sans-serif;
 }
 
 .stat-label {
@@ -139,72 +140,145 @@
     text-transform: uppercase;
 }
 
-.btn-pwd-toggle {
-    background: transparent;
-    border: 1px solid #94a3b8;
-    color: #94a3b8;
-    padding: 6px 15px;
-    font-size: 12px;
-    border-radius: 6px;
-}
-
-.btn-pwd-toggle:hover {
-    border-color: #fff;
-    color: #fff;
-    box-shadow: 0 0 10px rgba(255,255,255,0.2);
-}
-
-/* --- FORM ĐỔI MẬT KHẨU --- */
-.password-change-box {
-    background: rgba(15, 23, 42, 0.9);
-    border: 1px dashed #38bdf8;
-    padding: 20px;
-    border-radius: 12px;
-    margin-bottom: 30px;
-    animation: fadeIn 0.3s ease;
-}
-
-.password-change-box h4 {
-    margin: 0 0 15px 0;
-    color: #38bdf8;
-    font-family: 'Oswald';
-    letter-spacing: 1px;
-}
-
-.pwd-form {
+/* =========================================
+   2. TABS NAVIGATION (HỆ THỐNG MENU)
+========================================= */
+.user-tabs-container {
     display: flex;
     gap: 15px;
+    margin-bottom: 30px;
+    flex-wrap: wrap;
 }
 
-.pwd-form input {
+.tab-btn {
     flex: 1;
-    background: #1e293b;
-    border: 1px solid #334155;
-    color: #fff;
-    padding: 12px;
-    border-radius: 6px;
-}
-
-.pwd-form input:focus {
-    outline: none;
-    border-color: #38bdf8;
-}
-
-.btn-save-pwd {
-    background: #38bdf8;
-    color: #000;
-    border: none;
-}
-
-/* --- TIÊU ĐỀ SECTION --- */
-.section-title {
-    font-family: 'Oswald';
-    color: #fff;
-    margin-bottom: 20px;
+    min-width: 200px;
+    padding: 15px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background: rgba(15, 23, 42, 0.6);
+    border: 2px solid #334155;
+    color: #94a3b8;
+    border-radius: 8px;
+    font-family: 'Oswald', sans-serif;
     text-transform: uppercase;
-    letter-spacing: 2px;
-    border-left: 4px solid #38bdf8;
-    padding-left: 15px;
+}
+
+.tab-btn:hover {
+    transform: translateY(-2px);
+    background: rgba(255, 255, 255, 0.05);
+}
+
+/* Hiệu ứng màu sắc cho từng Tab riêng biệt */
+.tab-btn-matchups.active {
+    background: rgba(56, 189, 248, 0.15);
+    border-color: #38bdf8;
+    color: #38bdf8;
+    box-shadow: 0 0 15px rgba(56, 189, 248, 0.3);
+}
+
+.tab-btn-strategies.active {
+    background: rgba(16, 185, 129, 0.15);
+    border-color: #10b981;
+    color: #10b981;
+    box-shadow: 0 0 15px rgba(16, 185, 129, 0.3);
+}
+
+.tab-btn-profile.active {
+    background: rgba(245, 158, 11, 0.15);
+    border-color: #f59e0b;
+    color: #f59e0b;
+    box-shadow: 0 0 15px rgba(245, 158, 11, 0.3);
+}
+
+/* =========================================
+   3. TAB PROFILE (THIẾT LẬP HỒ SƠ)
+========================================= */
+.profile-setting-box {
+    border-color: #f59e0b !important;
+    box-shadow: 0 10px 30px rgba(245, 158, 11, 0.1) !important;
+}
+
+.profile-title {
+    border-color: #f59e0b !important;
+    color: #fcd34d !important;
+}
+
+.profile-form-layout {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    margin-top: 20px;
+}
+
+.pwd-update-box {
+    background: rgba(0, 0, 0, 0.3);
+    padding: 20px;
+    border-radius: 8px;
+    border: 1px dashed #475569;
+    margin-top: 10px;
+}
+
+.input-profile {
+    border-color: #f59e0b !important;
+}
+
+.input-profile:focus {
+    box-shadow: 0 0 8px rgba(245, 158, 11, 0.4) !important;
+}
+
+.btn-save-profile {
+    height: 50px;
+    font-size: 18px;
+    background: #f59e0b;
+    color: #000;
+    margin-top: 10px;
+    width: 100%;
+    border: none;
+    border-radius: 8px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: 0.2s;
+    font-family: 'Oswald', sans-serif;
+}
+
+.btn-save-profile:hover {
+    box-shadow: 0 0 15px rgba(245, 158, 11, 0.5);
+    transform: translateY(-2px);
+}
+
+/* =========================================
+   4. CÁC HELPER CLASSES & ĐIỀU CHỈNH FORM MATCHUP
+========================================= */
+.flex-2 { flex: 2; }
+.full-width { width: 100%; }
+
+.matchup-textarea {
+    height: 100px;
+    width: 95%;
+}
+
+.mini-item-list {
+    display: flex;
+    gap: 5px;
+    flex-wrap: wrap;
+    margin-top: 10px;
+}
+
+.filter-bar-user {
+    background: rgba(30, 41, 59, 0.8) !important;
+}
+
+.search-input {
+    flex: 1;
+}
+
+.enemy-avatar-mini {
+    width: 25px;
+    height: 25px;
+    border-radius: 50%;
 }
 
 /* RESPONSIVE */
@@ -213,5 +287,5 @@
     .profile-card { flex-direction: column; }
     .profile-meta { justify-content: center; }
     .profile-actions-wrapper { align-items: center; width: 100%; }
-    .pwd-form { flex-direction: column; }
+    .form-row { flex-direction: column; }
 }

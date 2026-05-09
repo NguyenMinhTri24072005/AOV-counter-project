@@ -11,34 +11,62 @@ const createStrategy = async (req, res) => {
     }
 };
 
+
 const getStrategies = async (req, res) => {
     try {
-        const { mode = 'standard', userId = null } = req.body;
-        let query = {};
+        // Nhận toàn bộ từ req.body (Vì route của bạn là POST /filter)
+        const { mode = 'standard', userId = null, currentUserId = null } = req.body;
+        
+        // 1. XÂY DỰNG ĐIỀU KIỆN QUYỀN RIÊNG TƯ
+        // Phải là công khai HOẶC là dữ liệu cũ chưa có trường này
+        const visibilityConditions = [
+            { visibility: 'public' },
+            { visibility: { $exists: false } } 
+        ];
 
-        // Xử lý bộ lọc theo Nguồn (Hệ thống / Cá nhân / Cộng đồng)
+        // Nếu người dùng đang đăng nhập, cho phép họ xem thêm chiến thuật private của chính họ
+        if (currentUserId) {
+            visibilityConditions.push({ author: currentUserId });
+        }
+
+        // Khởi tạo query với điều kiện BẮT BUỘC về quyền riêng tư
+        const query = {
+            $and: [ { $or: visibilityConditions } ]
+        };
+
+        // 2. XỬ LÝ BỘ LỌC THEO NGUỒN (Hệ thống / Cá nhân / Cộng đồng)
         const Admin = await User.findOne({ role: 'admin' });
         const adminId = Admin?._id;
+        
+        const authorQuery = {};
 
-        if (mode === 'standard') {
-            query.author = adminId;
-        } else if (mode === 'custom') {
-            query.author = userId;
+        if (mode === 'standard' && adminId) {
+            authorQuery.author = adminId;
+        } else if (mode === 'custom' && userId) {
+            authorQuery.author = userId;
         } else if (mode === 'compare') {
-            query.author = { $in: [adminId, userId] };
-        } else if (mode === 'community') {
-            query.author = { $ne: adminId }; // Lấy tất cả trừ Admin
+            // Dùng filter(Boolean) để lọc bỏ nếu userId hoặc adminId bị null
+            authorQuery.author = { $in: [adminId, userId].filter(Boolean) }; 
+        } else if (mode === 'community' && adminId) {
+            authorQuery.author = { $ne: adminId }; 
         }
-        // mode === 'pro' sẽ không có query.author -> Lấy TOÀN BỘ
 
+        // Nếu có điều kiện về tác giả thì nhét thêm vào $and để gộp chung với quyền riêng tư
+        if (Object.keys(authorQuery).length > 0) {
+            query.$and.push(authorQuery);
+        }
+
+        // 3. THỰC THI TRUY VẤN VÀ LẤY DỮ LIỆU ĐẦY ĐỦ
         const strategies = await Strategy.find(query)
-            .populate('teamA', 'name avatar role')
-            .populate('teamB', 'name avatar role')
-            .populate('counterItems', 'name icon passive')
+            // SỬA LỖI: Tên trường trong Model là 'roles' (có s) và thêm 'lane'
+            .populate('teamA', 'name avatar roles lane') 
+            .populate('teamB', 'name avatar roles lane')
+            // Thêm giá tiền (price) để Modal hiển thị giá trang bị chuẩn xác
+            .populate('counterItems', 'name icon passive price') 
             .populate('author', 'username role')
             .sort({ createdAt: -1 });
 
-        // Gắn thêm cờ isSystem để Frontend dễ xử lý
+        // 4. GẮN CỜ NHẬN DIỆN CHO FRONTEND
         const formattedStrategies = strategies.map(strat => {
             const stratObj = strat.toObject();
             stratObj.isSystem = stratObj.author?.role === 'admin';
@@ -78,6 +106,5 @@ const updateStrategy = async (req, res) => {
         res.status(200).json(updatedStrategy);
     } catch (error) { res.status(500).json({ message: error.message }); }
 };
-// Nhớ export updateStrategy nhé
 
 module.exports = { createStrategy, getStrategies, getMyStrategies, deleteStrategy, updateStrategy };

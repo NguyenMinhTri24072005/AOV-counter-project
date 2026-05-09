@@ -19,9 +19,6 @@ apiClient.interceptors.request.use((config) => {
     return Promise.reject(error);
 });
 
-// --- CÁC API AUTH ---
-export const loginUser = (data) => apiClient.post('/auth/login', data);
-export const registerUser = (data) => apiClient.post('/auth/register', data);
 
 // --- CÁC API CŨ ---
 export const getHeroes = () => apiClient.get('/heroes');
@@ -60,9 +57,6 @@ export const uploadImage = (formData) => apiClient.post('/upload', formData, {
 
 export const updateMatchup = (id, data) => apiClient.put(`/matchups/${id}`, data);
 export const updateStrategy = (id, data) => apiClient.put(`/strategies/${id}`, data);
-// ==========================================
-// THÊM MỚI: API CHO CHIẾN THUẬT NÂNG CAO (STRATEGY)
-// ==========================================
 
 // Lấy danh sách chiến thuật nâng cao (Combo, Synergy, Kỹ năng)
 export const getStrategies = (mode = 'standard', userId = null) => {
@@ -83,5 +77,24 @@ export const getMyStrategies = (userId) => {
 export const deleteStrategy = (id) => {
     return apiClient.delete(`/strategies/${id}`); // Sửa API thành apiClient
 };
+
+// ==========================================
+// QUẢN LÝ NGƯỜI DÙNG (USER PROFILE)
+// ==========================================
+export const getAllUsers = () => apiClient.get('/users');
+export const getUserProfile = () => apiClient.get('/users/profile');
+export const updateUserInfo = (id, data) => apiClient.put(`/users/${id}`, data);
+export const deleteUser = (id) => apiClient.delete(`/users/${id}`);
+export const changePassword = (data) => apiClient.put('/users/change-password', data);
+
+// --- CÁC API AUTH ---
+export const loginUser = (data) => apiClient.post('/auth/login', data);
+export const registerUser = (data) => apiClient.post('/auth/register', data);
+
+// 🌟 BỔ SUNG 3 API QUÊN MẬT KHẨU
+export const forgotPassword = (data) => apiClient.post('/auth/forgot-password', data);
+export const verifyOtp = (data) => apiClient.post('/auth/verify-otp', data);
+export const resetPassword = (data) => apiClient.post('/auth/reset-password', data);
+
 
 export default apiClient;
