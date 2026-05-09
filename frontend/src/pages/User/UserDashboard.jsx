@@ -31,8 +31,9 @@ const UserDashboard = () => {
     const [pwdData, setPwdData] = useState({ oldPwd: '', newPwd: '', confirmPwd: '' });
     const [userAvatar, setUserAvatar] = useState(user?.avatar || '');
 
+    // Sửa chữ heroId thành counterHeroId
     const [formData, setFormData] = useState({
-        enemyHeroId: '', heroId: '', score: 5, note: '', counterItems: []
+        enemyHeroId: '', counterHeroId: '', score: 5, note: '', counterItems: []
     });
 
     useEffect(() => {
@@ -49,7 +50,15 @@ const UserDashboard = () => {
             const [hRes, iRes, mRes] = await Promise.all([
                 getHeroes(), getItems(), getCounters([], [], 'custom', user?.id)
             ]);
-            setHeroes(hRes.data); setItems(iRes.data); setMyMatchups(mRes.data);
+
+            // 🌟 LỚP PHÒNG THỦ DỮ LIỆU CHỐNG LỖI .forEach is not a function
+            const fetchedHeroes = hRes.data.data ? hRes.data.data : hRes.data;
+            const fetchedItems = iRes.data.data ? iRes.data.data : iRes.data;
+            const fetchedMatchups = mRes.data.data ? mRes.data.data : mRes.data;
+
+            setHeroes(fetchedHeroes || []);
+            setItems(fetchedItems || []);
+            setMyMatchups(fetchedMatchups || []);
         } catch (err) {
             console.error("Lỗi tải dữ liệu cá nhân:", err);
         } finally {
@@ -61,6 +70,11 @@ const UserDashboard = () => {
         try {
             const res = await getUserProfile();
             setProfileData({ username: res.data.username, email: res.data.email || '' });
+
+            // Lấy Avatar từ Database ra để hiển thị khi F5 tải lại trang
+            if (res.data.avatar) {
+                setUserAvatar(res.data.avatar);
+            }
         } catch (error) {
             console.error("Lỗi tải profile:", error);
         }
@@ -97,10 +111,18 @@ const UserDashboard = () => {
 
     const handleSubmitMatchup = async (e) => {
         e.preventDefault();
+
+        // 🌟 BỔ SUNG: Bắt lỗi nếu người dùng quên chọn tướng
+        if (!formData.enemyHeroId || !formData.counterHeroId) {
+            return alert("⚠️ Vui lòng chọn đầy đủ Tướng Địch và Tướng Của Bạn!");
+        }
+
         try {
-            await createMatchup({ ...formData, author: user?.id });
+            await createMatchup({ ...formData, author: user?.id || user?._id });
             alert("Đã thêm bí kíp mới!");
-            setFormData({ enemyHeroId: '', heroId: '', score: 5, note: '', counterItems: [] });
+
+            // 🌟 SỬA ĐỔI: Nhớ đổi heroId thành counterHeroId ở đây nữa
+            setFormData({ enemyHeroId: '', counterHeroId: '', score: 5, note: '', counterItems: [] });
             loadData();
         } catch (err) {
             alert(err.response?.data?.message || "Lỗi khi lưu bí kíp");
@@ -122,7 +144,7 @@ const UserDashboard = () => {
                 username: profileData.username,
                 email: profileData.email
             });
-            alert("Cập nhật thông tin thành công!");
+            alert("Cập nhật thông biến thành công!");
         } catch (error) {
             alert(error.response?.data?.message || "Lỗi cập nhật thông tin");
         }
@@ -134,11 +156,22 @@ const UserDashboard = () => {
         try {
             const uploadData = new FormData();
             uploadData.append('image', file);
+
+            // 1. Tải ảnh lên thư mục uploads của server
             const upRes = await uploadImage(uploadData);
-            setUserAvatar(upRes.data.url);
-            alert("Đã tải ảnh lên thành công!");
+            const newAvatarUrl = upRes.data.url;
+
+            // 2. Hiển thị ảnh ngay lập tức ra màn hình
+            setUserAvatar(newAvatarUrl);
+
+            // 3. GỌI API LƯU ĐƯỜNG LINK ẢNH VÀO DATABASE CỦA USER ĐỂ LƯU VĨNH VIỄN
+            await updateUserInfo(user.id || user._id, {
+                avatar: newAvatarUrl
+            });
+
+            alert("Đã cập nhật Ảnh đại diện vĩnh viễn!");
         } catch (error) {
-            alert("Lỗi tải ảnh lên.");
+            alert("Lỗi tải ảnh lên hoặc lưu ảnh.");
         }
     };
 
@@ -290,7 +323,12 @@ const UserDashboard = () => {
                                 <div className="vs-logo">VS</div>
                                 <div className="slot-item">
                                     <span className="slot-title blue">TƯỚNG BẠN CHỌN</span>
-                                    <HeroSelect heroes={heroes} selectedHeroId={formData.heroId} onChange={id => setFormData({ ...formData, heroId: id })} />
+                                    {/* 🌟 SỬA LẠI TÊN BIẾN Ở DÒNG DƯỚI ĐÂY */}
+                                    <HeroSelect
+                                        heroes={heroes}
+                                        selectedHeroId={formData.counterHeroId}
+                                        onChange={id => setFormData({ ...formData, counterHeroId: id })}
+                                    />
                                 </div>
                                 <div className="score-picker-column">
                                     <span className="slot-title yellow">HIỆU QUẢ (1-5)</span>

@@ -5,6 +5,7 @@ const userSchema = new mongoose.Schema({
     password: { type: String, required: true }, // Sẽ được mã hóa
     email: { type: String, required: true, unique: true },
     role: { type: String, enum: ['admin', 'user'], default: 'user' }, // Phân quyền
+    avatar: { type: String, default: '' },
     resetPasswordToken: String, // Dùng cho chức năng quên mật khẩu
     resetPasswordExpires: Date,
     resetPasswordOtp: { type: String }, // Mã OTP 6 số

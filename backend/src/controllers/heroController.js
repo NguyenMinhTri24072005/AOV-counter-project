@@ -16,9 +16,33 @@ const createHero = async (req, res) => {
 
 const getAllHeroes = async (req, res) => {
     try {
-        // THÊM .populate('roles') để lấy được tên các vai trò
-        const heroes = await Hero.find().populate('roles').sort({ name: 1 });
-        res.status(200).json(heroes);
+        // 1. Nhận page và limit từ query (Mặc định trang 1, mỗi trang 20 tướng)
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 20;
+        
+        // 2. Tính toán số lượng bỏ qua
+        const skip = (page - 1) * limit;
+
+        // 3. Tìm dữ liệu theo phân trang
+        const heroes = await Hero.find()
+            .populate('roles')
+            .sort({ name: 1 })
+            .skip(skip)
+            .limit(limit);
+
+        // 4. Đếm tổng số lượng tướng để chia trang
+        const total = await Hero.countDocuments();
+
+        // 5. Trả về format chuẩn bao gồm cả thông tin phân trang
+        res.status(200).json({
+            data: heroes,
+            pagination: {
+                totalItems: total,
+                currentPage: page,
+                totalPages: Math.ceil(total / limit),
+                limit: limit
+            }
+        });
     } catch (error) {
         res.status(500).json({ message: 'Lỗi: ' + error.message });
     }

@@ -489,3 +489,97 @@
 
 .enemy-shadow .strat-hero-icon-wrap img { border-color: #ef4444; }
 .ally-shadow .strat-hero-icon-wrap img { border-color: #10b981; }
+
+/* =========================================
+   CÁC CLASS PHỤ TRỢ (Dọn dẹp Inline Style)
+========================================= */
+.txt-sm {
+    font-size: 13px;
+}
+
+.flex-row-gap {
+    display: flex;
+    gap: 15px;
+}
+
+.flex-1 {
+    flex: 1;
+}
+
+.pt-10 {
+    padding-top: 10px;
+}
+
+.mt-20 {
+    margin-top: 20px;
+}
+
+.text-center-full {
+    text-align: center;
+    width: 100%;
+    padding: 10px;
+}
+
+.no-margin {
+    margin: 0 !important;
+}
+
+.text-xs {
+    font-size: 12px;
+}
+
+/* =========================================
+   MÀU SẮC ĐỘNG CHO CARD RECOMMEND / THREAT
+========================================= */
+.threat-color {
+    color: #ef4444; /* Đỏ nguy hiểm */
+}
+
+.recommend-color {
+    color: #f59e0b; /* Vàng đề xuất */
+}
+
+.bg-threat {
+    background: #ef4444;
+    color: #fff;
+}
+
+.bg-recommend {
+    background: #f59e0b;
+    color: #000;
+}
+
+.picked-border-threat {
+    border: 2px solid #dc3545 !important;
+}
+
+.picked-border-recommend {
+    border: 2px solid #28a745 !important;
+}
+
+.rec-header-transparent {
+    padding: 0;
+    border: none;
+    background: transparent;
+}
+
+.rec-card-avatar {
+    width: 60px;
+    height: 60px;
+    border-radius: 8px;
+    object-fit: cover;
+}
+
+.rec-note-author {
+    font-size: 11px;
+    margin-top: 3px;
+    font-weight: bold;
+}
+
+.author-system {
+    color: #38bdf8;
+}
+
+.author-personal {
+    color: #10b981;
+}

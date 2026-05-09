@@ -1,0 +1,13 @@
+🎯 1. Target Lớn Bị Bỏ Quên: Tab "Quản lý Người Dùng" (Cho Admin)
+Ở các bước trước, tôi đã hướng dẫn bạn viết API Backend cho userController.js (gồm getAllUsers, updateUser, deleteUser) để Admin có quyền quản trị toàn bộ tài khoản trong hệ thống.
+Tuy nhiên, trong file AdminDashboard.jsx hiện tại, bạn chưa hề tạo nút bấm và Component giao diện cho phần này. Admin hiện tại mới chỉ quản lý được Game Data (Tướng, Trang bị, Kèo...) chứ chưa quản lý được "Con người".
+
+🎯 2. Lưu trữ Ảnh đại diện (Avatar) vĩnh viễn
+Hiện tại ở UserDashboard, người dùng có thể tải ảnh lên (thông qua uploadRoutes), API trả về link ảnh thành công. Tuy nhiên:
+
+Bảng User.js trong Database hình như chưa có trường avatar: { type: String }.
+
+Khi người dùng F5 tải lại trang, ảnh đại diện sẽ biến mất vì link ảnh chưa thực sự được lưu vào Hồ sơ (Profile) của họ trên Database.
+
+🎯 3. Thiếu cơ chế Phân trang (Pagination)
+Khi dự án của bạn phình to (70 tướng, hàng trăm trang bị, hàng ngàn kèo khắc chế từ cộng đồng), việc gọi API tải toàn bộ dữ liệu cùng một lúc sẽ làm trang web bị giật lag và sập Server. Hiện tại API của bạn đang find() và trả về tất cả. Ở giai đoạn tối ưu cuối cùng, chúng ta sẽ cần thêm Limit & Skip.

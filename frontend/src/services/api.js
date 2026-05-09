@@ -21,7 +21,7 @@ apiClient.interceptors.request.use((config) => {
 
 
 // --- CÁC API CŨ ---
-export const getHeroes = () => apiClient.get('/heroes');
+export const getHeroes = (page = 1, limit = 200) => apiClient.get(`/heroes?page=${page}&limit=${limit}`);
 export const createHero = (heroData) => apiClient.post('/heroes', heroData);
 export const getItems = () => apiClient.get('/items');
 export const getCounters = (enemyIds, excludedIds = [], mode = 'standard', userId = null) => apiClient.post('/matchups/recommend', { enemyIds, excludedIds, mode, userId });

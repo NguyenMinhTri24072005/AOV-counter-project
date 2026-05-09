@@ -4,6 +4,7 @@ import ManageItems from './ManageItems';
 import ManageMetadata from './ManageMetadata';
 import ManageMatchups from './ManageMatchups'; 
 import ManageStrategies from './ManageStrategies'; // IMPORT MỚI
+import ManageUsers from './ManageUsers';
 import './Admin.css';
 
 const AdminDashboard = () => {
@@ -19,6 +20,7 @@ const AdminDashboard = () => {
                 <button className={subTab === 'metadata' ? 'active' : ''} onClick={() => setSubTab('metadata')}>📁 Phân loại & Role</button>
                 <button className={subTab === 'matchups' ? 'active' : ''} onClick={() => setSubTab('matchups')}>🔥 Kèo Khắc Chế</button>
                 <button className={subTab === 'strategies' ? 'active' : ''} onClick={() => setSubTab('strategies')}>🧠 CHIẾN THUẬT NÂNG CAO</button>
+                <button className={subTab === 'users' ? 'active' : ''} onClick={() => setSubTab('users')}>👥 QUẢN LÝ TÀI KHOẢN</button>
             </aside>
 
             <main className="admin-main">
@@ -27,6 +29,7 @@ const AdminDashboard = () => {
                 {subTab === 'metadata' && <ManageMetadata />}
                 {subTab === 'matchups' && <ManageMatchups />}
                 {subTab === 'strategies' && <ManageStrategies />}
+                {subTab === 'users' && <ManageUsers />}
             </main>
         </div>
     );

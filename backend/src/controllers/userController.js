@@ -23,9 +23,11 @@ const getProfile = async (req, res) => {
 };
 
 // [PUT] /api/users/:id - Cập nhật thông tin (Dùng chung cho Admin sửa user hoặc User tự sửa mình)
+// [PUT] /api/users/:id - Cập nhật thông tin
 const updateUser = async (req, res) => {
     try {
-        const { username, email, role, password } = req.body;
+        // 🌟 Bổ sung 'avatar' vào biến nhận dữ liệu
+        const { username, email, role, password, avatar } = req.body; 
         const user = await User.findById(req.params.id);
 
         if (!user) return res.status(404).json({ message: "Không tìm thấy người dùng" });
@@ -38,6 +40,11 @@ const updateUser = async (req, res) => {
         user.username = username || user.username;
         user.email = email || user.email;
 
+        // 🌟 NẾU CÓ TRUYỀN AVATAR LÊN THÌ LƯU VÀO DATABASE
+        if (avatar !== undefined) {
+            user.avatar = avatar;
+        }
+
         // Nếu có nhập mật khẩu mới thì mã hóa lại
         if (password) {
             const salt = await bcrypt.genSalt(10);
@@ -45,11 +52,14 @@ const updateUser = async (req, res) => {
         }
 
         const updatedUser = await user.save();
+        
+        // Trả về dữ liệu mới
         res.json({
             _id: updatedUser._id,
             username: updatedUser.username,
             email: updatedUser.email,
-            role: updatedUser.role
+            role: updatedUser.role,
+            avatar: updatedUser.avatar // 🌟 Trả về cả avatar
         });
     } catch (error) {
         res.status(400).json({ message: error.message });

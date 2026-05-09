@@ -14,8 +14,8 @@ const isAdmin = (req, res, next) => {
 
 // Route dành cho cá nhân người dùng
 router.get('/profile', verifyToken, getProfile);
-router.put('/:id', verifyToken, updateUser); // User tự sửa hoặc Admin sửa
 router.put('/change-password', verifyToken, changePassword);
+router.put('/:id', verifyToken, updateUser); // User tự sửa hoặc Admin sửa
 
 // Route dành riêng cho Admin
 router.get('/', verifyToken, isAdmin, getAllUsers);

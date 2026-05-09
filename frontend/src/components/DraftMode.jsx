@@ -29,13 +29,18 @@ const DraftMode = ({ heroes }) => {
     const [advancedStrategies, setAdvancedStrategies] = useState([]); 
     const [isAnalyzing, setIsAnalyzing] = useState(false);
 
+    // 🌟 KHẮC PHỤC LỖI: Đảm bảo heroesList luôn là một mảng
+    const heroesList = Array.isArray(heroes) ? heroes : (heroes?.data || []);
+
     const validBansEnemy = bansEnemy.filter(Boolean);
     const validBansAlly = bansAlly.filter(Boolean);
     const validPicksEnemy = picksEnemy.filter(Boolean);
     const validPicksAlly = picksAlly.filter(Boolean);
 
     const allExcluded = [...validBansEnemy, ...validBansAlly, ...validPicksEnemy, ...validPicksAlly];
-    const availableHeroes = heroes.filter(hero => !allExcluded.includes(hero._id));
+    
+    // 🌟 Sử dụng heroesList thay cho heroes
+    const availableHeroes = heroesList.filter(hero => !allExcluded.includes(hero._id));
 
     const openModalFor = (type, index) => {
         setTargetAction({ type, index });
@@ -73,7 +78,6 @@ const DraftMode = ({ heroes }) => {
         }
     };
 
-    // FETCH TOÀN BỘ DỮ LIỆU KHI CÓ SỰ THAY ĐỔI TƯỚNG HOẶC CHẾ ĐỘ
     useEffect(() => {
         const fetchAllRelations = async () => {
             setIsAnalyzing(true);
@@ -104,8 +108,10 @@ const DraftMode = ({ heroes }) => {
     // --- LOGIC PHÂN TÍCH 1V1 ---
     const isEnemyCounteredByAlly = (enemyId) => allEnemyCounters.some(c => validPicksAlly.includes(c.hero._id) && c.matchupDetails.some(d => d.enemyId === enemyId));
     const isAllyCounteredByEnemy = (allyId) => allAllyCounters.some(c => validPicksEnemy.includes(c.hero._id) && c.matchupDetails.some(d => d.enemyId === allyId));
-    const getHeroName = (id) => heroes.find(h => h._id === id)?.name || "Unknown";
-    const getHeroAvatar = (id) => heroes.find(h => h._id === id)?.avatar || "";
+    
+    // 🌟 Sử dụng heroesList
+    const getHeroName = (id) => heroesList.find(h => h._id === id)?.name || "Unknown";
+    const getHeroAvatar = (id) => heroesList.find(h => h._id === id)?.avatar || "";
 
     const excludedFromRecommendations = [...validBansEnemy, ...validBansAlly, ...validPicksEnemy];
     const recommendedToPick = allEnemyCounters.filter(item => !excludedFromRecommendations.includes(item.hero._id));
@@ -116,7 +122,6 @@ const DraftMode = ({ heroes }) => {
     // --- THUẬT TOÁN CHIẾN THUẬT NÂNG CAO (AI TỰ ĐỘNG SUY LUẬN) ---
     // ========================================================
 
-    // 1. Kèo Kỹ Năng 2 Chiều 
     const skillMatchups = [];
     advancedStrategies.forEach(s => {
         if (s.type === 'skill_matchup') {
@@ -128,35 +133,30 @@ const DraftMode = ({ heroes }) => {
         }
     });
 
-    // 2. Phối hợp đồng đội (Gợi ý cho đội Ta)
     const allySynergies = advancedStrategies.filter(s => 
         s.type === 'synergy' && 
         s.teamA.some(h => validPicksAlly.includes(h._id)) && 
         !s.teamA.every(h => validPicksAlly.includes(h._id)) 
     );
 
-    // 3. Cảnh báo Combo địch (Nâng cấp AI suy luận)
     const enemyCombosRaw = [];
     advancedStrategies.forEach(s => {
-        // Cảnh báo từ các Synergy được khai báo
         if (s.type === 'synergy' && s.teamA.some(h => validPicksEnemy.includes(h._id))) {
             enemyCombosRaw.push(s);
         }
         
-        // AI TỰ ĐỘNG SUY LUẬN: Nếu địch pick tướng nằm trong teamB của "Đội hình phá giải"
         if (s.type === 'combo_counter' && s.teamB.some(h => validPicksEnemy.includes(h._id))) {
             enemyCombosRaw.push({
                 ...s,
-                _id: s._id + '_auto', // Tránh trùng key UI
-                type: 'synergy',      // Ép kiểu thành synergy để chỉ hiển thị 1 phe địch
-                teamA: s.teamB,       
+                _id: s._id + '_auto',
+                type: 'synergy',      
+                teamA: s.teamB,        
                 teamB: [],
-                note: "" // XÓA GHI CHÚ ĐỂ TRÁNH BỊ "LẠT QUẺ"
+                note: "" 
             });
         }
     });
 
-    // Lọc trùng lặp combo để tránh 1 cảnh báo hiện 2 lần
     const uniqueEnemyCombos = [];
     const seenCombos = new Set();
     enemyCombosRaw.forEach(c => {
@@ -167,7 +167,6 @@ const DraftMode = ({ heroes }) => {
         }
     });
 
-    // 4. Phá giải đội hình (Gợi ý phe ta)
     const comboCounters = advancedStrategies.filter(s =>
         s.type === 'combo_counter' &&
         s.teamB.some(h => validPicksEnemy.includes(h._id))
@@ -208,36 +207,38 @@ const DraftMode = ({ heroes }) => {
 
     // UI: RENDER CARD 1V1
     const renderCards = (cardsList, isThreatBox) => {
-        if (cardsList.length === 0) return <p className="no-results" style={{ fontSize: '13px' }}>Không có dữ liệu 1v1 phù hợp.</p>;
+        if (cardsList.length === 0) return <p className="no-results txt-sm">Không có dữ liệu 1v1 phù hợp.</p>;
         
         return (
             <div className="recommendation-grid">
                 {cardsList.map((dataObj) => {
                     const isPicked = isThreatBox ? validPicksEnemy.includes(dataObj.hero._id) : validPicksAlly.includes(dataObj.hero._id);
-                    const colorMain = isThreatBox ? '#dc3545' : '#28a745';
+                    const colorClass = isThreatBox ? 'threat-color' : 'recommend-color';
+                    const bgClass = isThreatBox ? 'bg-threat' : 'bg-recommend';
                     const textLabel = isThreatBox ? '(Địch Đã Chọn)' : '(Đã Chọn)';
+                    const cardBorderClass = isPicked ? `picked-border-${isThreatBox ? 'threat' : 'recommend'}` : '';
 
                     return (
-                        <div key={dataObj.hero._id} className="rec-card" style={{ border: isPicked ? `2px solid ${colorMain}` : '1px solid #334155', display: 'flex', gap: '15px' }}>
-                            <img src={getAvatarUrl(dataObj.hero.avatar)} style={{ width: '60px', height: '60px', borderRadius: '8px', objectFit: 'cover' }} alt="hero" />
-                            <div style={{ flex: 1 }}>
-                                <div className="rec-header" style={{ padding: 0, border: 'none', background: 'transparent' }}>
-                                    <strong>{dataObj.hero.name} {isPicked && <span style={{ color: colorMain, fontSize: '12px' }}>{textLabel}</span>}</strong>
-                                    <span className="score-badge" style={{ background: isThreatBox ? '#ef4444' : '#f59e0b', color: isThreatBox ? '#fff' : '#000' }}>
+                        <div key={dataObj.hero._id} className={`rec-card flex-row-gap ${cardBorderClass}`}>
+                            <img src={getAvatarUrl(dataObj.hero.avatar)} className="rec-card-avatar" alt="hero" />
+                            <div className="flex-1">
+                                <div className="rec-header rec-header-transparent">
+                                    <strong>{dataObj.hero.name} {isPicked && <span className={`text-xs ${colorClass}`}>{textLabel}</span>}</strong>
+                                    <span className={`score-badge ${bgClass}`}>
                                         {isThreatBox ? 'NGUY HIỂM: ' : 'ĐIỂM: '}{dataObj.totalScore}
                                     </span>
                                 </div>
-                                <div className="rec-body" style={{ padding: '10px 0 0 0' }}>
+                                <div className="rec-body pt-10">
                                     <ul className="rec-details-list">
                                         {dataObj.matchupDetails.map((detail, idx) => (
                                             <li key={idx}>
                                                 Khắc chế 
                                                 <img src={getAvatarUrl(getHeroAvatar(detail.enemyId))} className="mini-inline-avatar" alt="enemy" title={getHeroName(detail.enemyId)} />
-                                                <b style={{color: isThreatBox ? '#ef4444' : '#f59e0b'}}>{getHeroName(detail.enemyId)}</b> ({detail.score}đ)
+                                                <b className={colorClass}>{getHeroName(detail.enemyId)}</b> ({detail.score}đ)
                                                 
                                                 <div className="rec-note">
                                                     "{detail.note}"
-                                                    <div style={{ fontSize: '11px', marginTop: '3px', color: detail.isSystem ? '#38bdf8' : '#10b981', fontWeight: 'bold' }}>
+                                                    <div className={`rec-note-author ${detail.isSystem ? 'author-system' : 'author-personal'}`}>
                                                         Nguồn: {detail.isSystem ? 'Hệ Thống' : detail.authorName}
                                                     </div>
                                                 </div>
@@ -253,14 +254,14 @@ const DraftMode = ({ heroes }) => {
         );
     };
 
-    // UI: RENDER CHIẾN THUẬT NÂNG CAO (ĐÃ ĐẢO VỊ TRÍ TRÁI-PHẢI)
+    // UI: RENDER CHIẾN THUẬT NÂNG CAO
     const renderAdvancedCards = (stratList, title, themeColor, isThreatBox = false) => {
         if (!stratList || stratList.length === 0) return null;
         
         const getFilteredStrats = (list, sourceFilter) => list.filter(s => sourceFilter === 'system' ? s.isSystem : !s.isSystem);
 
         const StrategyList = ({ data }) => {
-            if(data.length === 0) return <p className="no-results" style={{fontSize:'12px'}}>Không có chiến thuật này.</p>;
+            if(data.length === 0) return <p className="no-results txt-sm">Không có chiến thuật này.</p>;
             return (
                 <div className="strat-advanced-grid">
                     {data.map(strat => (
@@ -268,16 +269,13 @@ const DraftMode = ({ heroes }) => {
                             <div className="adv-card-header">
                                 <span className="adv-type">{strat.type === 'skill_matchup' ? '⚔️ 50/50' : (strat.type === 'synergy' ? '🤝 COMBO' : '🛡️ KHẮC CHẾ')}</span>
 
-                                {/* HIỂN THỊ ĐIỂM SỐ TẠI ĐÂY */}
-                                <span className="score-badge" style={{ background: isThreatBox ? '#ef4444' : '#f59e0b', color: isThreatBox ? '#fff' : '#000', margin: 0 }}>
+                                <span className={`score-badge no-margin ${isThreatBox ? 'bg-threat' : 'bg-recommend'}`}>
                                     {isThreatBox ? 'NGUY HIỂM: ' : 'ĐIỂM: '} {strat.score || 5}
                                 </span>
                                 
                                 <span className="adv-author">Bởi: {strat.isSystem ? 'Hệ thống' : strat.author?.username}</span>
                             </div>
                             <div className="adv-teams">
-                                
-                                {/* BÊN TRÁI: GỢI Ý CHO TA (Hoặc Combo địch nếu là khối Cảnh Báo) */}
                                 <div className={`mini-team-row ${isThreatBox ? 'enemy-shadow' : 'ally-shadow'}`}>
                                     {strat.teamA.map(h => (
                                         <div key={h._id} className="strat-hero-icon-wrap">
@@ -287,7 +285,6 @@ const DraftMode = ({ heroes }) => {
                                     ))}
                                 </div>
                                 
-                                {/* BÊN PHẢI: ĐỐI THỦ (Nếu có) */}
                                 {strat.type !== 'synergy' && strat.teamB?.length > 0 && (
                                     <>
                                         <div className="adv-vs">{strat.type === 'skill_matchup' ? '50/50' : 'VS'}</div>
@@ -301,11 +298,7 @@ const DraftMode = ({ heroes }) => {
                                         </div>
                                     </>
                                 )}
-
                             </div>
-                            {/* {strat.note && strat.note.trim() !== "" && (
-                                <p className="adv-note">"{strat.note}"</p>
-                            )} */}
                         </div>
                     ))}
                 </div>
@@ -340,7 +333,7 @@ const DraftMode = ({ heroes }) => {
 
             <HeroModal isOpen={isModalOpen} onClose={() => { setIsModalOpen(false); setTargetAction({ type: null, index: null }); }} heroes={availableHeroes} onSelect={handleSelectHero} />
 
-            <div className="draft-board-split" style={{ marginTop: '20px' }}>
+            <div className="draft-board-split mt-20">
                 <div className="team-col ally-col">
                     <h2 className="col-title ally-title">🛡️ ĐỘI TA</h2>
                     <div className="bans-row">
@@ -383,7 +376,7 @@ const DraftMode = ({ heroes }) => {
             </div>
 
             <div className="analysis-container">
-                {isAnalyzing && <p className="loading-text" style={{ textAlign: 'center', width: '100%', padding: '10px' }}>Máy chủ đang phân tích...</p>}
+                {isAnalyzing && <p className="loading-text text-center-full">Máy chủ đang phân tích...</p>}
 
                 {/* KHU VỰC 1: ĐỀ XUẤT 1V1 VÀ COMBO PHÁ GIẢI (MÀU XANH) */}
                 <div className="analysis-board board-recommend">
@@ -408,7 +401,6 @@ const DraftMode = ({ heroes }) => {
                         )}
                     </div>
 
-                    {/* HIỂN THỊ KÈO 50/50 VÀ COMBO TẠI ĐÂY */}
                     {renderAdvancedCards(skillMatchups, '⚔️ KÈO KỸ NĂNG (ĐỐI ĐẦU SÒNG PHẲNG)', '#f59e0b', false)}
                     {renderAdvancedCards(allySynergies, '🤝 GỢI Ý PHỐI HỢP ĐỒNG ĐỘI (COMBO)', '#10b981', false)}
                     {renderAdvancedCards(comboCounters, '🛡️ PHÁ GIẢI ĐỘI HÌNH ĐỊCH', '#38bdf8', false)}
@@ -436,7 +428,6 @@ const DraftMode = ({ heroes }) => {
                         )}
                     </div>
 
-                    {/* HIỂN THỊ CẢNH BÁO ĐỊCH TẠI ĐÂY (TRUYỀN BIẾN TRUE ĐỂ KHUNG MÀU ĐỎ LÊN TRƯỚC) */}
                     {renderAdvancedCards(uniqueEnemyCombos, '🚨 BÁO ĐỘNG: ĐỊCH ĐANG XÂY DỰNG COMBO', '#ef4444', true)}
                 </div>
             </div>

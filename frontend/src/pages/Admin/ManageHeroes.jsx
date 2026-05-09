@@ -17,6 +17,9 @@ const SKILL_LABELS = {
     skill4: 'Chiêu 4',
 };
 
+// ==========================================
+// 1. MODAL XEM CHI TIẾT TƯỚNG
+// ==========================================
 const HeroDetailModal = ({ hero, onClose }) => {
     if (!hero) return null;
     const skills = hero.skills || {};
@@ -50,16 +53,26 @@ const HeroDetailModal = ({ hero, onClose }) => {
     );
 };
 
+// ==========================================
+// 2. COMPONENT QUẢN LÝ TƯỚNG (CHÍNH)
+// ==========================================
 const ManageHeroes = () => {
     const [heroes, setHeroes] = useState([]);
     const [roles, setRoles] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
     const [selectedHero, setSelectedHero] = useState(null);
 
+    // Filter states
     const [searchTerm, setSearchTerm] = useState('');
     const [roleFilter, setRoleFilter] = useState('');
     const [laneFilter, setLaneFilter] = useState('');
 
+    // Pagination states
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 24; 
+
+    // Form Modal states
+    const [isFormOpen, setIsFormOpen] = useState(false); // 🌟 Thêm cờ mở Form Modal
     const initialForm = {
         name: '', avatar: '', roles: [], lane: [],
         skills: { passive: '', skill1: '', skill2: '', skill3: '', skill4: '' }
@@ -71,9 +84,14 @@ const ManageHeroes = () => {
 
     useEffect(() => { loadData(); }, []);
 
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchTerm, roleFilter, laneFilter]);
+
     const loadData = async () => {
         const [resH, resR] = await Promise.all([getHeroes(), getRoles()]);
-        setHeroes(resH.data); setRoles(resR.data);
+        setHeroes(resH.data.data); 
+        setRoles(resR.data);
     };
 
     const filteredHeroes = heroes.filter(hero => {
@@ -82,6 +100,9 @@ const ManageHeroes = () => {
         const matchLane = laneFilter ? hero.lane?.includes(laneFilter) : true;
         return matchName && matchRole && matchLane;
     });
+
+    const totalPages = Math.ceil(filteredHeroes.length / itemsPerPage);
+    const currentHeroes = filteredHeroes.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
     const handleRoleChange = (roleId) => {
         const newRoles = formData.roles.includes(roleId)
@@ -124,10 +145,18 @@ const ManageHeroes = () => {
                 await createHero(dataToSave);
                 alert("Thêm tướng thành công!");
             }
-            cancelEdit();
+            closeFormModal();
             loadData();
         } catch (error) { alert("Lỗi: " + error.message); }
         finally { setIsLoading(false); }
+    };
+
+    const openAddForm = () => {
+        setFormData(initialForm);
+        setEditingId(null);
+        setSelectedFile(null);
+        setPreviewUrl(null);
+        setIsFormOpen(true);
     };
 
     const handleEditClick = (hero, e) => {
@@ -142,7 +171,7 @@ const ManageHeroes = () => {
         setEditingId(hero._id);
         setSelectedFile(null);
         setPreviewUrl(null);
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+        setIsFormOpen(true);
     };
 
     const handleDeleteClick = async (id, e) => {
@@ -152,7 +181,8 @@ const ManageHeroes = () => {
         }
     };
 
-    const cancelEdit = () => {
+    const closeFormModal = () => {
+        setIsFormOpen(false);
         setFormData(initialForm);
         setEditingId(null);
         setSelectedFile(null);
@@ -161,69 +191,20 @@ const ManageHeroes = () => {
 
     return (
         <div className="manage-container">
-            <h2>🦸 Quản lý danh sách Tướng</h2>
+            {/* Tiêu đề & Nút Thêm Mới */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                <h2>🦸 QUẢN LÝ TƯỚNG</h2>
+                <button 
+                    onClick={openAddForm} 
+                    className="btn-save" 
+                    style={{ background: '#38bdf8', padding: '10px 20px', borderRadius: '8px' }}
+                >
+                    ➕ THÊM TƯỚNG MỚI
+                </button>
+            </div>
 
-            <form className={`admin-form ${editingId ? 'editing' : ''}`} onSubmit={handleSubmit}>
-                {editingId && <h4 className="edit-badge">Đang chỉnh sửa: {formData.name}</h4>}
-
-                <div className="form-row align-start">
-                    <div className="form-col">
-                        <input type="text" placeholder="Tên tướng" required
-                            value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} />
-                        <div className="form-row">
-                            <input type="file" accept="image/*" onChange={handleFileChange} className="filter-input" style={{ padding: '7px' }} />
-                            <input type="text" placeholder="Hoặc dán Link ảnh URL..."
-                                value={formData.avatar} onChange={e => setFormData({ ...formData, avatar: e.target.value })} className="filter-input" />
-                        </div>
-                    </div>
-                    <div className="preview-box">
-                        <span className="preview-label">Xem trước</span>
-                        <img src={previewUrl || getAvatarUrl(formData.avatar)} alt="Preview" className="preview-img" />
-                    </div>
-                </div>
-
-                <div className="checkbox-section">
-                    <div className="checkbox-group checkbox-col">
-                        <label>Vai trò (Roles):</label>
-                        <div className="item-checkbox-list">
-                            {roles.map(r => (
-                                <label key={r._id} className="item-checkbox-label">
-                                    <input type="checkbox" checked={formData.roles.includes(r._id)} onChange={() => handleRoleChange(r._id)} style={{ marginRight: '5px' }} />
-                                    {r.name}
-                                </label>
-                            ))}
-                        </div>
-                    </div>
-                    <div className="checkbox-group checkbox-col">
-                        <label>Đường đi (Lane):</label>
-                        <div className="item-checkbox-list">
-                            {LANE_OPTIONS.map(lane => (
-                                <label key={lane} className="item-checkbox-label">
-                                    <input type="checkbox" checked={formData.lane.includes(lane)} onChange={() => handleLaneChange(lane)} style={{ marginRight: '5px' }} />
-                                    {lane}
-                                </label>
-                            ))}
-                        </div>
-                    </div>
-                </div>
-
-                <div className="skills-grid" style={{ marginTop: '15px' }}>
-                    <textarea className="form-textarea" style={{ marginTop: 0 }} placeholder="Mô tả Nội tại" value={formData.skills.passive || ''} onChange={e => setFormData({ ...formData, skills: { ...formData.skills, passive: e.target.value } })} />
-                    <textarea className="form-textarea" style={{ marginTop: 0 }} placeholder="Chiêu 1" value={formData.skills.skill1 || ''} onChange={e => setFormData({ ...formData, skills: { ...formData.skills, skill1: e.target.value } })} />
-                    <textarea className="form-textarea" style={{ marginTop: 0 }} placeholder="Chiêu 2" value={formData.skills.skill2 || ''} onChange={e => setFormData({ ...formData, skills: { ...formData.skills, skill2: e.target.value } })} />
-                    <textarea className="form-textarea" style={{ marginTop: 0 }} placeholder="Chiêu 3" value={formData.skills.skill3 || ''} onChange={e => setFormData({ ...formData, skills: { ...formData.skills, skill3: e.target.value } })} />
-                    <textarea className="form-textarea" style={{ marginTop: 0 }} placeholder="Chiêu 4" value={formData.skills.skill4 || ''} onChange={e => setFormData({ ...formData, skills: { ...formData.skills, skill4: e.target.value } })} />
-                </div>
-
-                <div className="form-actions">
-                    <button type="submit" className={`btn-save ${editingId ? 'btn-update' : ''}`} disabled={isLoading}>
-                        {isLoading ? "Đang lưu..." : (editingId ? 'Cập Nhật Tướng' : 'Lưu Tướng')}
-                    </button>
-                    {editingId && <button type="button" className="btn-cancel" onClick={cancelEdit}>Hủy Sửa</button>}
-                </div>
-            </form>
-
-            <div className="filter-bar">
+            {/* BỘ LỌC TÌM KIẾM */}
+            <div className="filter-bar" style={{ marginTop: '0' }}>
                 <input type="text" placeholder="🔍 Tìm tên tướng..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="filter-input" />
                 <select value={roleFilter} onChange={e => setRoleFilter(e.target.value)} className="filter-select">
                     <option value="">-- Tất cả vai trò --</option>
@@ -235,9 +216,10 @@ const ManageHeroes = () => {
                 </select>
             </div>
 
+            {/* DANH SÁCH TƯỚNG */}
             <div className="hero-grid">
-                {filteredHeroes.length > 0 ? (
-                    filteredHeroes.map(h => (
+                {currentHeroes.length > 0 ? (
+                    currentHeroes.map(h => (
                         <div key={h._id} className="hero-card" onClick={() => setSelectedHero(h)} title="Nhấn để xem kỹ năng">
                             <img src={getAvatarUrl(h.avatar)} alt={h.name} className="hero-card-img" />
                             <span className="hero-card-name">{h.name}</span>
@@ -251,12 +233,103 @@ const ManageHeroes = () => {
                         </div>
                     ))
                 ) : (
-                    <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '30px', color: '#666' }}>
-                        Không tìm thấy tướng nào phù hợp với bộ lọc.
-                    </div>
+                    <div className="empty-filter-msg">Không tìm thấy tướng nào phù hợp với bộ lọc.</div>
                 )}
             </div>
 
+            {/* THANH PHÂN TRANG */}
+            {totalPages > 1 && (
+                <div className="pagination-bar">
+                    <button className="btn-page" disabled={currentPage === 1} onClick={() => setCurrentPage(prev => prev - 1)}>
+                        ◀ TRƯỚC
+                    </button>
+                    <span className="page-info">
+                        TRANG {currentPage} / {totalPages}
+                    </span>
+                    <button className="btn-page" disabled={currentPage === totalPages} onClick={() => setCurrentPage(prev => prev + 1)}>
+                        SAU ▶
+                    </button>
+                </div>
+            )}
+
+            {/* ==========================================
+                3. MODAL NHẬP LIỆU (THÊM / SỬA TƯỚNG)
+            ========================================== */}
+            {isFormOpen && (
+                <div className="card-detail-overlay" onClick={closeFormModal} style={{ zIndex: 10000 }}>
+                    <div 
+                        className="cyber-panel" 
+                        onClick={e => e.stopPropagation()} 
+                        style={{ 
+                            background: '#0f172a', width: '90%', maxWidth: '800px', maxHeight: '90vh', 
+                            padding: '30px', borderRadius: '12px', overflowY: 'auto', 
+                            border: `2px solid ${editingId ? '#f59e0b' : '#38bdf8'}`,
+                            position: 'relative'
+                        }}
+                    >
+                        <button className="close-modal-btn" onClick={closeFormModal}>×</button>
+                        <h2 style={{ color: editingId ? '#f59e0b' : '#38bdf8', marginBottom: '25px', fontFamily: 'Oswald', textTransform: 'uppercase' }}>
+                            {editingId ? `✏️ CẬP NHẬT: ${formData.name}` : '➕ THÊM TƯỚNG MỚI'}
+                        </h2>
+
+                        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                            <div className="form-row align-start">
+                                <div className="form-col">
+                                    <input type="text" placeholder="Tên tướng" required className="filter-input"
+                                        value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} />
+                                    <div className="form-row">
+                                        <input type="file" accept="image/*" onChange={handleFileChange} className="filter-input img-upload-input" />
+                                        <input type="text" placeholder="Hoặc dán Link URL ảnh..."
+                                            value={formData.avatar} onChange={e => setFormData({ ...formData, avatar: e.target.value })} className="filter-input" />
+                                    </div>
+                                </div>
+                                <div className="preview-box">
+                                    <img src={previewUrl || getAvatarUrl(formData.avatar)} alt="Preview" className="preview-img" style={{ width: '80px', height: '80px' }} />
+                                </div>
+                            </div>
+
+                            <div className="checkbox-section" style={{ background: 'rgba(0,0,0,0.2)', padding: '15px', borderRadius: '8px', border: '1px dashed #334155' }}>
+                                <div className="checkbox-group checkbox-col" style={{ border: 'none', padding: 0 }}>
+                                    <label>Vai trò (Roles):</label>
+                                    <div className="item-checkbox-list">
+                                        {roles.map(r => (
+                                            <label key={r._id} className="item-checkbox-label">
+                                                <input type="checkbox" checked={formData.roles.includes(r._id)} onChange={() => handleRoleChange(r._id)} className="check-mr" />
+                                                {r.name}
+                                            </label>
+                                        ))}
+                                    </div>
+                                </div>
+                                <div className="checkbox-group checkbox-col" style={{ border: 'none', padding: 0 }}>
+                                    <label>Đường đi (Lane):</label>
+                                    <div className="item-checkbox-list">
+                                        {LANE_OPTIONS.map(lane => (
+                                            <label key={lane} className="item-checkbox-label">
+                                                <input type="checkbox" checked={formData.lane.includes(lane)} onChange={() => handleLaneChange(lane)} className="check-mr" />
+                                                {lane}
+                                            </label>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="skills-grid skills-grid-mt" style={{ background: 'rgba(0,0,0,0.2)', padding: '15px', borderRadius: '8px', border: '1px dashed #334155' }}>
+                                <textarea className="form-textarea txt-no-mt" placeholder="Mô tả Nội tại" value={formData.skills.passive || ''} onChange={e => setFormData({ ...formData, skills: { ...formData.skills, passive: e.target.value } })} />
+                                <textarea className="form-textarea txt-no-mt" placeholder="Chiêu 1" value={formData.skills.skill1 || ''} onChange={e => setFormData({ ...formData, skills: { ...formData.skills, skill1: e.target.value } })} />
+                                <textarea className="form-textarea txt-no-mt" placeholder="Chiêu 2" value={formData.skills.skill2 || ''} onChange={e => setFormData({ ...formData, skills: { ...formData.skills, skill2: e.target.value } })} />
+                                <textarea className="form-textarea txt-no-mt" placeholder="Chiêu 3" value={formData.skills.skill3 || ''} onChange={e => setFormData({ ...formData, skills: { ...formData.skills, skill3: e.target.value } })} />
+                                <textarea className="form-textarea txt-no-mt" placeholder="Chiêu 4" value={formData.skills.skill4 || ''} onChange={e => setFormData({ ...formData, skills: { ...formData.skills, skill4: e.target.value } })} />
+                            </div>
+
+                            <button type="submit" className="btn-save" style={{ width: '100%', height: '50px', fontSize: '18px', background: editingId ? '#f59e0b' : '#38bdf8' }} disabled={isLoading}>
+                                {isLoading ? "ĐANG XỬ LÝ..." : (editingId ? '💾 LƯU CẬP NHẬT' : '➕ XÁC NHẬN THÊM')}
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* MODAL XEM CHI TIẾT KHI CLICK VÀO CARD (Giữ nguyên) */}
             {selectedHero && <HeroDetailModal hero={selectedHero} onClose={() => setSelectedHero(null)} />}
         </div>
     );

@@ -42,10 +42,11 @@ function App() {
     useEffect(() => {
         const fetchHeroes = async () => {
             try {
-                const response = await getHeroes();
-                setHeroes(response.data);
+                const res = await getHeroes();
+                // 🌟 SỬA DÒNG NÀY: Dùng kỹ thuật phòng thủ 
+                setHeroes(res.data.data ? res.data.data : res.data);
             } catch (error) {
-                console.error("Lỗi tải tướng:", error);
+                console.error("Lỗi tải dữ liệu tướng:", error);
             }
         };
         fetchHeroes();
@@ -104,8 +105,8 @@ function App() {
 
             <Routes>
                 <Route path="/" element={<HomeTabs heroes={heroes} />} />
-                <Route path="/heroes" element={<HeroesPage />} /> 
-                <Route path="/items" element={<ItemsPage />} />   
+                <Route path="/heroes" element={<HeroesPage />} />
+                <Route path="/items" element={<ItemsPage />} />
                 <Route path="/login" element={<Login />} />
                 <Route path="/register" element={<Register />} />
                 <Route path="/profile" element={user ? <UserDashboard /> : <Navigate to="/login" replace />} />

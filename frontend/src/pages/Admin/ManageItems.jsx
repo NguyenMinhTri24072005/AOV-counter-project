@@ -7,6 +7,9 @@ const getItemIconUrl = (url) => {
     return `http://localhost:5000${url}`;
 };
 
+// ==========================================
+// 1. MODAL XEM CHI TIẾT TRANG BỊ
+// ==========================================
 const ItemDetailModal = ({ item, onClose }) => {
     if (!item) return null;
     return (
@@ -32,15 +35,25 @@ const ItemDetailModal = ({ item, onClose }) => {
     );
 };
 
+// ==========================================
+// 2. COMPONENT QUẢN LÝ TRANG BỊ (CHÍNH)
+// ==========================================
 const ManageItems = () => {
     const [items, setItems] = useState([]);
     const [categories, setCategories] = useState([]);
     const [selectedItem, setSelectedItem] = useState(null);
 
+    // Filter states
     const [searchTerm, setSearchTerm] = useState('');
     const [categoryFilter, setCategoryFilter] = useState('');
     const [tierFilter, setTierFilter] = useState('');
 
+    // Pagination states
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 25; // 🌟 Phân trang: 24 trang bị / trang
+
+    // Form Modal states
+    const [isFormOpen, setIsFormOpen] = useState(false);
     const initialForm = { name: '', icon: '', category: '', tier: 3, price: '', passive: '' };
     const [formData, setFormData] = useState(initialForm);
     const [isLoading, setIsLoading] = useState(false);
@@ -51,10 +64,17 @@ const ManageItems = () => {
 
     useEffect(() => { loadData(); }, []);
 
+    // Reset về trang 1 khi thay đổi bộ lọc
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchTerm, categoryFilter, tierFilter]);
+
     const loadData = async () => {
         try {
             const [resItems, resCats] = await Promise.all([getItems(), getCategories()]);
-            setItems(resItems.data);
+            // Tương thích cả trường hợp Backend có hoặc chưa có phân trang
+            const fetchedItems = resItems.data.data ? resItems.data.data : resItems.data;
+            setItems(fetchedItems);
             setCategories(resCats.data);
         } catch (error) { console.error("Lỗi:", error); }
     };
@@ -65,6 +85,10 @@ const ManageItems = () => {
         const matchTier = tierFilter ? item.tier === Number(tierFilter) : true;
         return matchName && matchCategory && matchTier;
     });
+
+    // 🌟 Logic Phân Trang
+    const totalPages = Math.ceil(filteredItems.length / itemsPerPage);
+    const currentItems = filteredItems.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
     const handleFileChange = (e) => {
         const file = e.target.files[0];
@@ -93,13 +117,21 @@ const ManageItems = () => {
                 await createItem(dataToSave);
                 alert("Thêm trang bị thành công!");
             }
-            cancelEdit();
+            closeFormModal();
             loadData();
         } catch (error) {
             alert("Lỗi: " + (error.response?.data?.message || error.message));
         } finally {
             setIsLoading(false);
         }
+    };
+
+    const openAddForm = () => {
+        setFormData(initialForm);
+        setEditingId(null);
+        setSelectedFile(null);
+        setPreviewUrl(null);
+        setIsFormOpen(true);
     };
 
     const handleEditClick = (item, e) => {
@@ -115,7 +147,7 @@ const ManageItems = () => {
         setEditingId(item._id);
         setSelectedFile(null);
         setPreviewUrl(null);
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+        setIsFormOpen(true);
     };
 
     const handleDeleteClick = async (id, e) => {
@@ -128,7 +160,8 @@ const ManageItems = () => {
         }
     };
 
-    const cancelEdit = () => {
+    const closeFormModal = () => {
+        setIsFormOpen(false);
         setFormData(initialForm);
         setEditingId(null);
         setSelectedFile(null);
@@ -137,52 +170,20 @@ const ManageItems = () => {
 
     return (
         <div className="manage-container">
-            <h2>⚔️ Quản lý danh sách Trang bị</h2>
+            {/* TIÊU ĐỀ VÀ NÚT THÊM MỚI */}
+            <div className="flex-row-gap" style={{ justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                <h2>⚔️ QUẢN LÝ TRANG BỊ</h2>
+                <button 
+                    onClick={openAddForm} 
+                    className="btn-save" 
+                    style={{ background: '#10b981', padding: '10px 20px', borderRadius: '8px' }}
+                >
+                    ➕ THÊM TRANG BỊ MỚI
+                </button>
+            </div>
 
-            <form className={`admin-form ${editingId ? 'editing' : ''}`} onSubmit={handleSubmit}>
-                {editingId && <h4 className="edit-badge">Đang chỉnh sửa: {formData.name}</h4>}
-
-                <div className="form-row">
-                    <input type="text" placeholder="Tên trang bị" required
-                        value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} />
-                    <select required value={formData.category} onChange={e => setFormData({ ...formData, category: e.target.value })}>
-                        <option value="">-- Chọn Phân loại --</option>
-                        {categories.map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
-                    </select>
-                    <select value={formData.tier} onChange={e => setFormData({ ...formData, tier: Number(e.target.value) })}>
-                        <option value="3">Cấp 3 (Mạnh nhất)</option>
-                        <option value="2">Cấp 2</option>
-                        <option value="1">Cấp 1</option>
-                    </select>
-                    <input type="number" placeholder="Giá tiền"
-                        value={formData.price} onChange={e => setFormData({ ...formData, price: e.target.value ? Number(e.target.value) : '' })} />
-                </div>
-
-                <div className="form-row align-start" style={{ marginTop: '15px' }}>
-                    <div className="form-col">
-                        <div className="form-row">
-                            <input type="file" accept="image/*" onChange={handleFileChange} className="filter-input" style={{ padding: '7px' }} />
-                            <input type="text" placeholder="Hoặc dán Link ảnh URL..."
-                                value={formData.icon} onChange={e => setFormData({ ...formData, icon: e.target.value })} className="filter-input" />
-                        </div>
-                        <textarea className="form-textarea" style={{ marginTop: 0 }} placeholder="Mô tả Nội tại của trang bị..."
-                            value={formData.passive} onChange={e => setFormData({ ...formData, passive: e.target.value })} />
-                    </div>
-                    <div className="preview-box">
-                        <span className="preview-label">Xem trước</span>
-                        <img src={previewUrl || getItemIconUrl(formData.icon)} alt="Preview" className="preview-img item-preview" />
-                    </div>
-                </div>
-
-                <div className="form-actions">
-                    <button type="submit" className={`btn-save ${editingId ? 'btn-update' : ''}`} disabled={isLoading}>
-                        {isLoading ? 'Đang xử lý...' : (editingId ? 'Cập Nhật Trang Bị' : 'Lưu Trang Bị')}
-                    </button>
-                    {editingId && <button type="button" className="btn-cancel" onClick={cancelEdit}>Hủy Sửa</button>}
-                </div>
-            </form>
-
-            <div className="filter-bar">
+            {/* BỘ LỌC TÌM KIẾM */}
+            <div className="filter-bar" style={{ marginTop: '0' }}>
                 <input type="text" placeholder="🔍 Tìm tên trang bị..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="filter-input" />
                 <select value={categoryFilter} onChange={e => setCategoryFilter(e.target.value)} className="filter-select">
                     <option value="">-- Tất cả phân loại --</option>
@@ -190,15 +191,16 @@ const ManageItems = () => {
                 </select>
                 <select value={tierFilter} onChange={e => setTierFilter(e.target.value)} className="filter-select">
                     <option value="">-- Tất cả cấp độ --</option>
-                    <option value="3">Cấp 3</option>
+                    <option value="3">Cấp 3 (Mạnh nhất)</option>
                     <option value="2">Cấp 2</option>
                     <option value="1">Cấp 1</option>
                 </select>
             </div>
 
+            {/* DANH SÁCH TRANG BỊ */}
             <div className="item-grid">
-                {filteredItems.length > 0 ? (
-                    filteredItems.map(item => (
+                {currentItems.length > 0 ? (
+                    currentItems.map(item => (
                         <div key={item._id} className="item-card" onClick={() => setSelectedItem(item)} title="Nhấn để xem chi tiết">
                             <img src={getItemIconUrl(item.icon)} alt={item.name} className="item-card-img" />
                             <strong className="item-card-name">{item.name}</strong>
@@ -214,13 +216,92 @@ const ManageItems = () => {
                         </div>
                     ))
                 ) : (
-                    <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '30px', color: '#666' }}>
+                    <div className="empty-filter-msg">
                         Không tìm thấy trang bị nào phù hợp với bộ lọc.
                     </div>
                 )}
             </div>
 
+            {/* THANH PHÂN TRANG */}
+            {totalPages > 1 && (
+                <div className="pagination-bar">
+                    <button className="btn-page" disabled={currentPage === 1} onClick={() => setCurrentPage(prev => prev - 1)}>
+                        ◀ TRƯỚC
+                    </button>
+                    <span className="page-info">
+                        TRANG {currentPage} / {totalPages}
+                    </span>
+                    <button className="btn-page" disabled={currentPage === totalPages} onClick={() => setCurrentPage(prev => prev + 1)}>
+                        SAU ▶
+                    </button>
+                </div>
+            )}
+
+            {/* MODAL CHI TIẾT KHI CLICK VÀO THẺ TRANG BỊ */}
             {selectedItem && <ItemDetailModal item={selectedItem} onClose={() => setSelectedItem(null)} />}
+
+            {/* ==========================================
+                3. MODAL NHẬP LIỆU (THÊM / SỬA TRANG BỊ)
+            ========================================== */}
+            {isFormOpen && (
+                <div className="card-detail-overlay" onClick={closeFormModal} style={{ zIndex: 10000 }}>
+                    <div 
+                        className="cyber-panel" 
+                        onClick={e => e.stopPropagation()} 
+                        style={{ 
+                            background: '#0f172a', width: '90%', maxWidth: '700px', maxHeight: '90vh', 
+                            padding: '30px', borderRadius: '12px', overflowY: 'auto', 
+                            border: `2px solid ${editingId ? '#f59e0b' : '#10b981'}`,
+                            position: 'relative'
+                        }}
+                    >
+                        <button className="close-modal-btn" onClick={closeFormModal}>×</button>
+                        <h2 style={{ color: editingId ? '#f59e0b' : '#10b981', marginBottom: '25px', fontFamily: 'Oswald', textTransform: 'uppercase' }}>
+                            {editingId ? `✏️ CẬP NHẬT: ${formData.name}` : '➕ THÊM TRANG BỊ MỚI'}
+                        </h2>
+
+                        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                            {/* Hàng 1: Tên, Phân loại, Cấp độ, Giá */}
+                            <div className="form-row">
+                                <input type="text" placeholder="Tên trang bị" required className="filter-input"
+                                    value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} />
+                                <select required className="filter-select" value={formData.category} onChange={e => setFormData({ ...formData, category: e.target.value })}>
+                                    <option value="">-- Phân loại --</option>
+                                    {categories.map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
+                                </select>
+                                <select className="filter-select" value={formData.tier} onChange={e => setFormData({ ...formData, tier: Number(e.target.value) })}>
+                                    <option value="3">Cấp 3</option>
+                                    <option value="2">Cấp 2</option>
+                                    <option value="1">Cấp 1</option>
+                                </select>
+                                <input type="number" placeholder="Giá tiền" className="filter-input"
+                                    value={formData.price} onChange={e => setFormData({ ...formData, price: e.target.value ? Number(e.target.value) : '' })} />
+                            </div>
+
+                            {/* Hàng 2: Up ảnh và Nội tại */}
+                            <div className="form-row align-start mt-20">
+                                <div className="form-col">
+                                    <div className="form-row">
+                                        <input type="file" accept="image/*" onChange={handleFileChange} className="filter-input img-upload-input" />
+                                        <input type="text" placeholder="Hoặc dán Link URL ảnh..."
+                                            value={formData.icon} onChange={e => setFormData({ ...formData, icon: e.target.value })} className="filter-input" />
+                                    </div>
+                                    <textarea className="form-textarea txt-no-mt" placeholder="Mô tả Nội tại của trang bị (Hiệu ứng đặc biệt)..."
+                                        value={formData.passive} onChange={e => setFormData({ ...formData, passive: e.target.value })} />
+                                </div>
+                                <div className="preview-box">
+                                    <span className="preview-label">Xem trước</span>
+                                    <img src={previewUrl || getItemIconUrl(formData.icon)} alt="Preview" className="preview-img item-preview" />
+                                </div>
+                            </div>
+
+                            <button type="submit" className="btn-save" style={{ width: '100%', height: '50px', fontSize: '18px', background: editingId ? '#f59e0b' : '#10b981' }} disabled={isLoading}>
+                                {isLoading ? "ĐANG XỬ LÝ..." : (editingId ? '💾 LƯU CẬP NHẬT TRANG BỊ' : '➕ XÁC NHẬN THÊM')}
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
