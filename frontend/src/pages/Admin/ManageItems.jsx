@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { getItems, getCategories, createItem, updateItem, deleteItem, uploadImage } from '../../services/api';
+import { toast } from 'react-toastify';
 
 const getItemIconUrl = (url) => {
     if (!url) return 'https://placehold.co/60x60?text=Item';
@@ -50,7 +51,7 @@ const ManageItems = () => {
 
     // Pagination states
     const [currentPage, setCurrentPage] = useState(1);
-    const itemsPerPage = 25; // 🌟 Phân trang: 24 trang bị / trang
+    const itemsPerPage = 25; // 🌟 Phân trang: 25 trang bị / trang
 
     // Form Modal states
     const [isFormOpen, setIsFormOpen] = useState(false);
@@ -112,15 +113,15 @@ const ManageItems = () => {
             const dataToSave = { ...formData, icon: iconUrl };
             if (editingId) {
                 await updateItem(editingId, dataToSave);
-                alert("Cập nhật trang bị thành công!");
+                toast.success("Cập nhật trang bị thành công!");
             } else {
                 await createItem(dataToSave);
-                alert("Thêm trang bị thành công!");
+                toast.success("Thêm trang bị thành công!");
             }
             closeFormModal();
             loadData();
         } catch (error) {
-            alert("Lỗi: " + (error.response?.data?.message || error.message));
+            toast.error("Lỗi: " + (error.response?.data?.message || error.message));
         } finally {
             setIsLoading(false);
         }
@@ -156,7 +157,7 @@ const ManageItems = () => {
             try {
                 await deleteItem(id);
                 loadData();
-            } catch (error) { alert("Lỗi khi xóa!"); }
+            } catch (error) { toast.error("Lỗi khi xóa!"); }
         }
     };
 

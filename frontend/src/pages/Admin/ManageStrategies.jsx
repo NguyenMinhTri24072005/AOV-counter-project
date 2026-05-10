@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useContext, useMemo } from 'react';
 import { getHeroes, getItems, getStrategies, createStrategy, updateStrategy, deleteStrategy } from '../../services/api';
 import { AuthContext } from '../../context/AuthContext';
+import { toast } from 'react-toastify';
 import HeroSelect from '../../components/HeroSelect';
 import ItemModal from '../../components/ItemModal';
 import './Admin.css';
@@ -150,7 +151,7 @@ const ManageStrategies = () => {
         const validTeamB = formData.teamB.filter(id => id !== null);
 
         if (validTeamA.length === 0 || (formData.type !== 'synergy' && validTeamB.length === 0)) {
-            return alert("⚠️ Vui lòng chọn ít nhất 1 tướng cho mỗi đội!");
+            return toast.warning("⚠️ Vui lòng chọn ít nhất 1 tướng cho mỗi đội!");
         }
 
         try {
@@ -166,17 +167,17 @@ const ManageStrategies = () => {
 
             if (editingId) {
                 await updateStrategy(editingId, payload);
-                alert("✅ Đã cập nhật chiến thuật vào hệ thống!");
+                toast.success("✅ Đã cập nhật chiến thuật vào hệ thống!");
             } else {
                 await createStrategy(payload);
-                alert("✅ Đã ghi danh chiến thuật vào hệ thống!");
+                toast.success("✅ Đã ghi danh chiến thuật vào hệ thống!");
             }
 
             closeFormModal();
             loadData();
         } catch (err) {
             console.error("Lỗi lưu Strategy:", err);
-            alert(err.response?.data?.message || "Lỗi lưu chiến thuật");
+            toast.error(err.response?.data?.message || "Lỗi lưu chiến thuật");
         }
     };
 
@@ -186,7 +187,7 @@ const ManageStrategies = () => {
             await deleteStrategy(id);
             loadData();
         } catch (err) {
-            alert("Lỗi khi xóa");
+            toast.error("Lỗi khi xóa");
         }
     };
 

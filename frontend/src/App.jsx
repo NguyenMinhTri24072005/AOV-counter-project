@@ -1,5 +1,9 @@
 import React, { useContext, useState, useEffect } from 'react';
 import { Routes, Route, Link, useNavigate, Navigate } from 'react-router-dom';
+// 1. Bạn đã import đúng thư viện
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+
 import { AuthContext } from './context/AuthContext';
 import Login from './pages/Login';
 import Register from './pages/Register';
@@ -43,7 +47,6 @@ function App() {
         const fetchHeroes = async () => {
             try {
                 const res = await getHeroes();
-                // 🌟 SỬA DÒNG NÀY: Dùng kỹ thuật phòng thủ 
                 setHeroes(res.data.data ? res.data.data : res.data);
             } catch (error) {
                 console.error("Lỗi tải dữ liệu tướng:", error);
@@ -59,13 +62,26 @@ function App() {
 
     return (
         <div className="app-container">
+            {/* 🌟 2. ĐẶT TOAST CONTAINER Ở ĐÂY 🌟 */}
+            <ToastContainer 
+                position="top-right" 
+                autoClose={3000} 
+                hideProgressBar={false} 
+                newestOnTop={true} 
+                closeOnClick 
+                rtl={false} 
+                pauseOnFocusLoss 
+                draggable 
+                pauseOnHover 
+                theme="dark" 
+            />
+
             {/* NAV BAR ESPORT STYLE */}
             <header className="app-header-nav">
                 <Link to="/" className="logo-link" >
                     <h1 className="cyber-logo">AOV <span>COUNTER</span></h1>
                 </Link>
 
-                {/* 🌟 THÊM THANH ĐIỀU HƯỚNG TƯỚNG & TRANG BỊ Ở ĐÂY 🌟 */}
                 <nav className="public-nav-links" style={{ display: 'flex', gap: '25px', marginLeft: '30px', marginRight: 'auto', alignItems: 'center' }}>
                     <Link to="/heroes" style={{ color: '#e2e8f0', textDecoration: 'none', fontWeight: 'bold', fontSize: '16px', letterSpacing: '1px', textTransform: 'uppercase' }} onMouseOver={(e) => e.target.style.color = '#3b82f6'} onMouseOut={(e) => e.target.style.color = '#e2e8f0'}>
                         🛡️ Tướng

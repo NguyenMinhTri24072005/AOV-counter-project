@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useContext, useMemo } from 'react';
 import { AuthContext } from '../../context/AuthContext';
+import { toast } from 'react-toastify';
 import { getHeroes, getItems, createMatchup, deleteMatchup, getCounters, uploadImage, getUserProfile, updateUserInfo, changePassword } from '../../services/api';
 import HeroSelect from '../../components/HeroSelect';
 import ItemModal from '../../components/ItemModal';
@@ -31,7 +32,9 @@ const UserDashboard = () => {
     const [pwdData, setPwdData] = useState({ oldPwd: '', newPwd: '', confirmPwd: '' });
     const [userAvatar, setUserAvatar] = useState(user?.avatar || '');
 
-    // Sửa chữ heroId thành counterHeroId
+    // 🌟 THÊM STATE CHO MODAL FORM
+    const [isFormOpen, setIsFormOpen] = useState(false);
+
     const [formData, setFormData] = useState({
         enemyHeroId: '', counterHeroId: '', score: 5, note: '', counterItems: []
     });
@@ -51,7 +54,6 @@ const UserDashboard = () => {
                 getHeroes(), getItems(), getCounters([], [], 'custom', user?.id)
             ]);
 
-            // 🌟 LỚP PHÒNG THỦ DỮ LIỆU CHỐNG LỖI .forEach is not a function
             const fetchedHeroes = hRes.data.data ? hRes.data.data : hRes.data;
             const fetchedItems = iRes.data.data ? iRes.data.data : iRes.data;
             const fetchedMatchups = mRes.data.data ? mRes.data.data : mRes.data;
@@ -71,7 +73,6 @@ const UserDashboard = () => {
             const res = await getUserProfile();
             setProfileData({ username: res.data.username, email: res.data.email || '' });
 
-            // Lấy Avatar từ Database ra để hiển thị khi F5 tải lại trang
             if (res.data.avatar) {
                 setUserAvatar(res.data.avatar);
             }
@@ -109,44 +110,54 @@ const UserDashboard = () => {
         }));
     };
 
+    // 🌟 CÁC HÀM MỞ / ĐÓNG MODAL FORM
+    const openAddForm = () => {
+        setFormData({ enemyHeroId: '', counterHeroId: '', score: 5, note: '', counterItems: [] });
+        setIsFormOpen(true);
+    };
+
+    const closeFormModal = () => {
+        setIsFormOpen(false);
+    };
+
     const handleSubmitMatchup = async (e) => {
         e.preventDefault();
 
-        // 🌟 BỔ SUNG: Bắt lỗi nếu người dùng quên chọn tướng
         if (!formData.enemyHeroId || !formData.counterHeroId) {
-            return alert("⚠️ Vui lòng chọn đầy đủ Tướng Địch và Tướng Của Bạn!");
+            return toast.warning("⚠️ Vui lòng chọn đầy đủ Tướng Địch và Tướng Của Bạn!");
         }
 
         try {
             await createMatchup({ ...formData, author: user?.id || user?._id });
-            alert("Đã thêm bí kíp mới!");
+            toast.success("Đã thêm bí kíp mới!");
 
-            // 🌟 SỬA ĐỔI: Nhớ đổi heroId thành counterHeroId ở đây nữa
             setFormData({ enemyHeroId: '', counterHeroId: '', score: 5, note: '', counterItems: [] });
+            setIsFormOpen(false); // 🌟 Đóng popup sau khi lưu thành công
             loadData();
         } catch (err) {
-            alert(err.response?.data?.message || "Lỗi khi lưu bí kíp");
+            toast.error(err.response?.data?.message || "Lỗi khi lưu bí kíp");
         }
     };
 
     const handleDelete = async (id) => {
         if (!window.confirm("Bạn muốn xóa bí kíp này?")) return;
         try {
-            await deleteMatchup(id); loadData();
-        } catch (err) { alert("Lỗi khi xóa"); }
+            await deleteMatchup(id); 
+            toast.success("Đã xóa bí kíp!"); // Thêm toast success cho thao tác xóa
+            loadData();
+        } catch (err) { toast.error("Lỗi khi xóa"); }
     };
 
     const handleUpdateProfile = async (e) => {
         e.preventDefault();
         try {
-            // Chỉ cập nhật Username và Email
             await updateUserInfo(user.id || user._id, {
                 username: profileData.username,
                 email: profileData.email
             });
-            alert("Cập nhật thông biến thành công!");
+            toast.success("Cập nhật thông tin thành công!");
         } catch (error) {
-            alert(error.response?.data?.message || "Lỗi cập nhật thông tin");
+            toast.error(error.response?.data?.message || "Lỗi cập nhật thông tin");
         }
     };
 
@@ -157,35 +168,32 @@ const UserDashboard = () => {
             const uploadData = new FormData();
             uploadData.append('image', file);
 
-            // 1. Tải ảnh lên thư mục uploads của server
             const upRes = await uploadImage(uploadData);
             const newAvatarUrl = upRes.data.url;
 
-            // 2. Hiển thị ảnh ngay lập tức ra màn hình
             setUserAvatar(newAvatarUrl);
 
-            // 3. GỌI API LƯU ĐƯỜNG LINK ẢNH VÀO DATABASE CỦA USER ĐỂ LƯU VĨNH VIỄN
             await updateUserInfo(user.id || user._id, {
                 avatar: newAvatarUrl
             });
 
-            alert("Đã cập nhật Ảnh đại diện vĩnh viễn!");
+            toast.success("Đã cập nhật Ảnh đại diện vĩnh viễn!");
         } catch (error) {
-            alert("Lỗi tải ảnh lên hoặc lưu ảnh.");
+            toast.error("Lỗi tải ảnh lên hoặc lưu ảnh.");
         }
     };
 
     const handlePasswordChange = async (e) => {
         e.preventDefault();
         if (pwdData.newPwd !== pwdData.confirmPwd) {
-            return alert("Mật khẩu xác nhận không khớp!");
+            return toast.warning("Mật khẩu xác nhận không khớp!");
         }
         try {
             await changePassword({ oldPassword: pwdData.oldPwd, newPassword: pwdData.newPwd });
-            alert("Đổi mật khẩu thành công!");
+            toast.success("Đổi mật khẩu thành công!");
             setPwdData({ oldPwd: '', newPwd: '', confirmPwd: '' });
         } catch (error) {
-            alert(error.response?.data?.message || "Lỗi đổi mật khẩu");
+            toast.error(error.response?.data?.message || "Lỗi đổi mật khẩu");
         }
     };
 
@@ -248,8 +256,6 @@ const UserDashboard = () => {
             {/* NỘI DUNG HIỂN THỊ TÙY THEO TAB */}
             {activeTab === 'profile' && (
                 <section className="battlefield-form-box profile-setting-box">
-
-                    {/* --- FORM 1: CẬP NHẬT THÔNG TIN CƠ BẢN --- */}
                     <h3 className="section-title profile-title">🛡️ THIẾT LẬP HỒ SƠ CHỈ HUY</h3>
                     <form onSubmit={handleUpdateProfile} className="profile-form-layout">
                         <div className="form-row">
@@ -273,10 +279,8 @@ const UserDashboard = () => {
                         </button>
                     </form>
 
-                    {/* ĐƯỜNG KẺ NGĂN CÁCH 2 FORM */}
                     <hr style={{ borderColor: '#334155', margin: '40px 0 30px 0', borderStyle: 'dashed' }} />
 
-                    {/* --- FORM 2: ĐỔI MẬT KHẨU BẢO MẬT --- */}
                     <h3 className="section-title profile-title" style={{ color: '#38bdf8', borderColor: '#38bdf8' }}>🔑 ĐỔI MẬT KHẨU BẢO MẬT</h3>
                     <form onSubmit={handlePasswordChange} className="profile-form-layout pwd-update-box">
                         <div className="form-row">
@@ -306,66 +310,11 @@ const UserDashboard = () => {
                             🔄 XÁC NHẬN ĐỔI MẬT KHẨU
                         </button>
                     </form>
-
                 </section>
             )}
 
             {activeTab === 'matchups' && (
                 <>
-                    <section className="battlefield-form-box">
-                        <h3 className="section-title">➕ THÊM BÍ KÍP KHẮC CHẾ 1V1 MỚI</h3>
-                        <form onSubmit={handleSubmitMatchup} className="cyber-form-layout">
-                            <div className="matchup-vs-display">
-                                <div className="slot-item">
-                                    <span className="slot-title red">ĐỐI THỦ</span>
-                                    <HeroSelect heroes={heroes} selectedHeroId={formData.enemyHeroId} isEnemy={true} onChange={id => setFormData({ ...formData, enemyHeroId: id })} />
-                                </div>
-                                <div className="vs-logo">VS</div>
-                                <div className="slot-item">
-                                    <span className="slot-title blue">TƯỚNG BẠN CHỌN</span>
-                                    {/* 🌟 SỬA LẠI TÊN BIẾN Ở DÒNG DƯỚI ĐÂY */}
-                                    <HeroSelect
-                                        heroes={heroes}
-                                        selectedHeroId={formData.counterHeroId}
-                                        onChange={id => setFormData({ ...formData, counterHeroId: id })}
-                                    />
-                                </div>
-                                <div className="score-picker-column">
-                                    <span className="slot-title yellow">HIỆU QUẢ (1-5)</span>
-                                    <div className="cyber-score-bar">
-                                        {[1, 2, 3, 4, 5].map(num => (
-                                            <button key={num} type="button" className={`score-node ${formData.score === num ? 'active' : ''}`}
-                                                onClick={() => setFormData({ ...formData, score: num })}>
-                                                {num}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="form-bottom-row">
-                                <div className="textarea-wrap form-col flex-2">
-                                    <label className="slot-title">MẸO KHẮC CHẾ:</label>
-                                    <textarea value={formData.note} required onChange={e => setFormData({ ...formData, note: e.target.value })} placeholder="VD: Florentino rất sợ bị khống chế cứng..." className="form-textarea matchup-textarea" />
-                                </div>
-                                <div className="items-selector-wrap form-col">
-                                    <label className="slot-title">TRANG BỊ ({formData.counterItems.length}):</label>
-                                    <div className="selected-items-row">
-                                        <button type="button" className="btn-open-item-modal full-width" onClick={() => setIsItemModalOpen(true)}>➕ Chọn Trang Bị</button>
-                                        <div className="mini-item-list">
-                                            {formData.counterItems.map(itemId => {
-                                                const it = items.find(i => i._id === itemId);
-                                                return <img key={itemId} src={getImgUrl(it?.icon)} alt="item" title={it?.name} className="match-item-icon" />;
-                                            })}
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <button type="submit" className="btn-cyber btn-save-matchup">XÁC NHẬN LƯU VÀO BÍ KÍP 1V1</button>
-                        </form>
-                    </section>
-
-                    {/* BỘ LỌC TÌM KIẾM */}
                     <div className="filter-bar filter-bar-user">
                         <input type="text" placeholder="🔍 Tìm kiếm bí kíp..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="filter-input search-input" />
                         <select value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)} className="filter-select">
@@ -378,9 +327,17 @@ const UserDashboard = () => {
                         </select>
                     </div>
 
-                    {/* DANH SÁCH BÍ KÍP */}
+                    {/* DANH SÁCH BÍ KÍP VÀ NÚT MỞ FORM */}
                     <section className="personal-matchups-section">
-                        <h3 className="section-title">📔 KHO BÍ KÍP 1V1 CỦA TÔI ({filteredResults.length})</h3>
+                        <div className="flex-row-gap" style={{ justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                            <h3 className="section-title m-0-b-5" style={{ marginBottom: 0, paddingLeft: 0, borderLeft: 'none' }}>
+                                📔 KHO BÍ KÍP 1V1 CỦA TÔI ({filteredResults.length})
+                            </h3>
+                            <button onClick={openAddForm} className="btn-save" style={{ background: '#38bdf8', padding: '10px 20px', borderRadius: '8px' }}>
+                                ➕ THÊM BÍ KÍP MỚI
+                            </button>
+                        </div>
+
                         {loading ? (
                             <div className="cyber-scanning-mini"><div className="scan-line"></div>ĐANG TRUY XUẤT DỮ LIỆU...</div>
                         ) : (
@@ -425,6 +382,67 @@ const UserDashboard = () => {
                             </div>
                         )}
                     </section>
+
+                    {/* 🌟 MODAL FORM THÊM BÍ KÍP (ĐÃ ĐƯỢC CHUYỂN THÀNH POPUP) */}
+                    {isFormOpen && (
+                        <div className="card-detail-overlay" onClick={closeFormModal} style={{ zIndex: 10000 }}>
+                            <div className="cyber-panel strat-modal-panel" onClick={e => e.stopPropagation()} style={{ background: '#0f172a', width: '90%', maxWidth: '800px', maxHeight: '90vh', padding: '30px', borderRadius: '12px', overflowY: 'auto', border: `2px solid #38bdf8`, position: 'relative' }}>
+                                <button className="close-modal-btn" onClick={closeFormModal}>×</button>
+                                <h2 style={{ color: '#38bdf8', marginBottom: '25px', fontFamily: 'Oswald', textTransform: 'uppercase' }}>
+                                    ➕ THÊM BÍ KÍP 1V1 MỚI
+                                </h2>
+                                <form onSubmit={handleSubmitMatchup} className="cyber-form-layout">
+                                    <div className="matchup-vs-display">
+                                        <div className="slot-item">
+                                            <span className="slot-title red">ĐỐI THỦ</span>
+                                            <HeroSelect heroes={heroes} selectedHeroId={formData.enemyHeroId} isEnemy={true} onChange={id => setFormData({ ...formData, enemyHeroId: id })} />
+                                        </div>
+                                        <div className="vs-logo">VS</div>
+                                        <div className="slot-item">
+                                            <span className="slot-title blue">TƯỚNG BẠN CHỌN</span>
+                                            <HeroSelect heroes={heroes} selectedHeroId={formData.counterHeroId} onChange={id => setFormData({ ...formData, counterHeroId: id })} />
+                                        </div>
+                                        <div className="score-picker-column">
+                                            <span className="slot-title yellow">HIỆU QUẢ (1-5)</span>
+                                            <div className="cyber-score-bar">
+                                                {[1, 2, 3, 4, 5].map(num => (
+                                                    <button key={num} type="button" className={`score-node ${formData.score === num ? 'active' : ''}`} onClick={() => setFormData({ ...formData, score: num })}>
+                                                        {num}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="form-bottom-row mt-20">
+                                        <div className="textarea-wrap form-col flex-2">
+                                            <label className="slot-title">MẸO KHẮC CHẾ:</label>
+                                            <textarea value={formData.note} required onChange={e => setFormData({ ...formData, note: e.target.value })} placeholder="VD: Florentino rất sợ bị khống chế cứng..." className="form-textarea matchup-textarea" />
+                                        </div>
+                                        <div className="items-selector-wrap form-col flex-1">
+                                            <label className="slot-title">TRANG BỊ ({formData.counterItems.length}):</label>
+                                            <div className="selected-items-row items-col-layout">
+                                                <button type="button" className="btn-open-item-modal btn-full" onClick={() => setIsItemModalOpen(true)}>➕ Chọn Trang Bị</button>
+                                                <div className="mini-item-list mini-item-wrap">
+                                                    {formData.counterItems.map(itemId => {
+                                                        const it = items.find(i => i._id === itemId);
+                                                        return <img key={itemId} src={getImgUrl(it?.icon)} alt="item" title={it?.name} className="match-item-icon mini-item-img" />;
+                                                    })}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="form-submit-row">
+                                        <button type="submit" className="btn-cyber btn-submit-large bg-emerald" style={{ color: '#000' }}>
+                                            XÁC NHẬN LƯU VÀO BÍ KÍP 1V1
+                                        </button>
+                                        <button type="button" className="btn-cyber btn-cancel btn-submit-large" onClick={closeFormModal}>
+                                            ❌ HỦY BỎ
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    )}
                 </>
             )}
 

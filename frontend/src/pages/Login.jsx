@@ -2,6 +2,7 @@ import React, { useState, useContext } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { loginUser, forgotPassword, verifyOtp, resetPassword } from '../services/api';
 import { AuthContext } from '../context/AuthContext';
+import { toast } from 'react-toastify';
 import './Auth.css';
 
 const Login = () => {
@@ -34,10 +35,10 @@ const Login = () => {
         e.preventDefault();
         try {
             await forgotPassword({ email: forgotData.email });
-            alert("Mã OTP đã được gửi đến Email của bạn!");
+            toast.success("Mã OTP đã được gửi đến Email của bạn!");
             setForgotStep(2);
         } catch (err) {
-            alert(err.response?.data?.message || "Lỗi gửi email!");
+            toast.error(err.response?.data?.message || "Lỗi gửi email!");
         }
     };
 
@@ -45,10 +46,10 @@ const Login = () => {
         e.preventDefault();
         try {
             await verifyOtp({ email: forgotData.email, otp: forgotData.otp });
-            alert("Mã OTP hợp lệ! Vui lòng đặt mật khẩu mới.");
+            toast.success("Mã OTP hợp lệ! Vui lòng đặt mật khẩu mới.");
             setForgotStep(3);
         } catch (err) {
-            alert(err.response?.data?.message || "OTP không chính xác hoặc đã hết hạn!");
+            toast.error(err.response?.data?.message || "OTP không chính xác hoặc đã hết hạn!");
         }
     };
 
@@ -57,17 +58,17 @@ const Login = () => {
         
         // 🌟 KIỂM TRA MẬT KHẨU NHẬP LẠI
         if (forgotData.newPassword !== forgotData.confirmNewPassword) {
-            return alert("Mật khẩu xác nhận không khớp! Vui lòng kiểm tra lại.");
+            return toast.warning("Mật khẩu xác nhận không khớp! Vui lòng kiểm tra lại.");
         }
 
         try {
             await resetPassword({ email: forgotData.email, otp: forgotData.otp, newPassword: forgotData.newPassword });
-            alert("Khôi phục mật khẩu thành công! Bạn có thể đăng nhập ngay.");
+            toast.success("Khôi phục mật khẩu thành công! Bạn có thể đăng nhập ngay.");
             setForgotStep(0);
             // Reset lại toàn bộ dữ liệu
             setForgotData({ email: '', otp: '', newPassword: '', confirmNewPassword: '' });
         } catch (err) {
-            alert(err.response?.data?.message || "Lỗi đặt lại mật khẩu!");
+            toast.error(err.response?.data?.message || "Lỗi đặt lại mật khẩu!");
         }
     };
 

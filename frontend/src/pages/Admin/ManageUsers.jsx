@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { getAllUsers, updateUserInfo, deleteUser } from '../../services/api';
+import { toast } from 'react-toastify';
 import './Admin.css';
 
 const ManageUsers = () => {
@@ -30,10 +31,10 @@ const ManageUsers = () => {
         if (!window.confirm("CẢNH BÁO: Bạn sắp xóa vĩnh viễn tài khoản này. Tiếp tục?")) return;
         try {
             await deleteUser(userId);
-            alert("Đã xóa tài khoản!");
+            toast.success("Đã xóa tài khoản!");
             fetchUsers();
         } catch (error) {
-            alert(error.response?.data?.message || "Lỗi khi xóa");
+            toast.error(error.response?.data?.message || "Lỗi khi xóa");
         }
     };
 
@@ -64,11 +65,11 @@ const ManageUsers = () => {
             }
 
             await updateUserInfo(editingUser._id, payload);
-            alert("Cập nhật thông tin tài khoản thành công!");
+            toast.success("Cập nhật thông tin tài khoản thành công!");
             setEditingUser(null);
             fetchUsers();
         } catch (error) {
-            alert(error.response?.data?.message || "Lỗi cập nhật thông tin");
+            toast.error(error.response?.data?.message || "Lỗi cập nhật thông tin");
         }
     };
 

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { getHeroes, getRoles, createHero, updateHero, deleteHero, uploadImage } from '../../services/api';
+import { toast } from 'react-toastify';
 
 const getAvatarUrl = (url) => {
     if (!url) return 'https://placehold.co/80x80?text=No+Image';
@@ -140,14 +141,14 @@ const ManageHeroes = () => {
             const dataToSave = { ...formData, avatar: avatarUrl };
             if (editingId) {
                 await updateHero(editingId, dataToSave);
-                alert("Cập nhật tướng thành công!");
+                toast.success("Cập nhật tướng thành công!");
             } else {
                 await createHero(dataToSave);
-                alert("Thêm tướng thành công!");
+                toast.success("Thêm tướng thành công!");
             }
             closeFormModal();
             loadData();
-        } catch (error) { alert("Lỗi: " + error.message); }
+        } catch (error) { toast.error("Lỗi: " + error.message); }
         finally { setIsLoading(false); }
     };
 

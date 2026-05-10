@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { getRoles, createRole, deleteRole, getCategories, createCategory, deleteCategory } from '../../services/api';
+import { toast } from 'react-toastify';
 
 const ManageMetadata = () => {
     const [roles, setRoles] = useState([]);
@@ -23,7 +24,7 @@ const ManageMetadata = () => {
             await createRole({ name: newRole });
             setNewRole('');
             loadData();
-        } catch (error) { alert('Lỗi thêm vai trò'); }
+        } catch (error) { toast.error('Lỗi thêm vai trò'); }
     };
 
     const handleAddCategory = async (e) => {
@@ -32,7 +33,7 @@ const ManageMetadata = () => {
             await createCategory({ name: newCategory });
             setNewCategory('');
             loadData();
-        } catch (error) { alert('Lỗi thêm phân loại'); }
+        } catch (error) { toast.error('Lỗi thêm phân loại'); }
     };
 
     const handleDeleteRole = async (id) => {

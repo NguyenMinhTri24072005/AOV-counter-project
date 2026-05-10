@@ -1,6 +1,7 @@
 import React, { useState, useContext } from 'react';
 import { getCounters, getStrategies } from '../services/api';
 import { AuthContext } from '../context/AuthContext';
+import { toast } from 'react-toastify';
 import HeroSelect from './HeroSelect';
 import ModeToggle from './ModeToggle';
 import './SoloCounter.css';
@@ -36,7 +37,7 @@ const SoloCounter = ({ heroes }) => {
 
     const handleAnalyze = async (sectionId) => {
         const section = sections.find(s => s.id === sectionId);
-        if (!section.enemyHeroId) return alert("Vui lòng chọn mục tiêu!");
+        if (!section.enemyHeroId) return toast.warning("Vui lòng chọn mục tiêu!");
 
         setSections(sections.map(s => s.id === sectionId ? { ...s, loading: true } : s));
         try {

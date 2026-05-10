@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useContext, useMemo } from 'react';
 import { getHeroes, getItems, getCounters, createMatchup, deleteMatchup, updateMatchup } from '../../services/api';
 import { AuthContext } from '../../context/AuthContext';
+import { toast } from 'react-toastify';
 import HeroSelect from '../../components/HeroSelect';
 import ItemModal from '../../components/ItemModal';
 import './Admin.css';
@@ -114,28 +115,28 @@ const ManageMatchups = () => {
 
             if (editingId) {
                 await updateMatchup(editingId, payload);
-                alert("Đã cập nhật chiến thuật thành công!");
+                toast.success("Đã cập nhật chiến thuật thành công!");
             } else {
                 await createMatchup(payload);
-                alert("Đã tạo chiến thuật mới thành công!");
+                toast.success("Đã tạo chiến thuật mới thành công!");
             }
 
             closeFormModal();
             loadData();
         } catch (err) {
             console.error("Lỗi Submit Matchup:", err);
-            alert(err.response?.data?.message || "Lỗi xử lý");
+            toast.error(err.response?.data?.message || "Lỗi xử lý");
         }
     };
 
     const handleDelete = async (id) => {
-        if (!id) return alert("Lỗi: Không tìm thấy ID của kèo này!");
+        if (!id) return toast.warning("Lỗi: Không tìm thấy ID của kèo này!");
         if (!window.confirm("Xác nhận xóa chiến thuật này?")) return;
         try {
             await deleteMatchup(id);
             loadData();
         } catch (err) {
-            alert("Lỗi khi xóa");
+            toast.error("Lỗi khi xóa");
         }
     };
 

@@ -1,5 +1,6 @@
 import React, { useContext } from 'react';
 import { AuthContext } from '../context/AuthContext';
+import { toast } from 'react-toastify';
 
 const ModeToggle = ({ mode, setMode }) => {
     const { user } = useContext(AuthContext);
@@ -7,7 +8,7 @@ const ModeToggle = ({ mode, setMode }) => {
     const handleModeChange = (newMode) => {
         // Chỉ yêu cầu đăng nhập đối với 'Của tôi' và 'So sánh chéo'
         if (!user && (newMode === 'custom' || newMode === 'compare')) {
-            alert("Vui lòng đăng nhập để sử dụng tính năng cá nhân hóa!");
+            toast.warning("Vui lòng đăng nhập để sử dụng tính năng cá nhân hóa!");
             return;
         }
         setMode(newMode);

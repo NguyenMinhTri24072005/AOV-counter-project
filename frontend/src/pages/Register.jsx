@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { registerUser } from '../services/api';
+import { toast } from 'react-toastify';
 import './Auth.css';
 
 const Register = () => {
@@ -17,7 +18,7 @@ const Register = () => {
                 password: formData.password, 
                 role: 'user' 
             });
-            alert("Đăng ký thành công! Vui lòng đăng nhập.");
+            toast.success("Đăng ký thành công! Vui lòng đăng nhập.");
             navigate('/login');
         } catch (err) {
             setError(err.response?.data?.message || 'Lỗi đăng ký!');
