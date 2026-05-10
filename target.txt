@@ -1,14 +1,5 @@
 
 
-### 🛠️ 2. Những Điểm Cần Cải Thiện (Để dự án mang tầm cỡ "Enterprise")
-
-Mặc dù dự án đã rất tốt, nhưng nếu bạn muốn đưa dự án này lên CV để apply vào các công ty lớn hoặc public cho hàng ngàn user sử dụng, bạn nên lưu ý các điểm sau:
-
-**1. Thay thế `alert()` bằng Toast Notifications:**
-Hiện tại, khi Thêm/Sửa/Xóa thành công hoặc báo lỗi, dự án đang dùng hàm `alert()` mặc định của trình duyệt. Nó làm ngắt quãng luồng thao tác của người dùng.
-
-* **Giải pháp:** Hãy cài thư viện `react-toastify` hoặc `react-hot-toast` để hiển thị các thông báo pop-up trượt vào từ góc màn hình (giống như thông báo của Facebook/Shopee).
-
 **2. Phân Trang Thực Sự Ở Backend (Backend Pagination):**
 Hiện tại, bạn đang dùng **Frontend Pagination** (Gọi `limit=200` để lấy toàn bộ dữ liệu về rồi dùng `slice` cắt mảng). Cách này chạy cực mượt nếu danh sách Tướng (khoảng 120 tướng).
 

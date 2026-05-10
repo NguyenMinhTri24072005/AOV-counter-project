@@ -24,12 +24,10 @@ const ManageMatchups = () => {
 
     const [isLoading, setIsLoading] = useState(false);
 
-    // STATE CHO BỘ LỌC
     const [searchTerm, setSearchTerm] = useState('');
     const [roleFilter, setRoleFilter] = useState('');
     const [laneFilter, setLaneFilter] = useState('');
 
-    // 🌟 STATE CHO FORM MODAL
     const [isFormOpen, setIsFormOpen] = useState(false);
     const initialForm = {
         enemyHeroId: '',
@@ -180,7 +178,6 @@ const ManageMatchups = () => {
 
     return (
         <div className="admin-manage-container">
-            {/* TIÊU ĐỀ VÀ NÚT THÊM MỚI */}
             <div className="flex-row-gap" style={{ justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                 <h2 className="admin-page-title m-0-b-5" style={{ marginBottom: 0 }}>⚔️ CHIẾN TRƯỜNG MÔ PHỎNG (1V1)</h2>
                 <button 
@@ -233,6 +230,11 @@ const ManageMatchups = () => {
                                     <div className="card-details">
                                         {group.matchupDetails.map((d, idx) => {
                                             const enemyHero = heroes.find(h => h._id === d.enemyId);
+
+                                            // 🌟 KIỂM TRA QUYỀN SỞ HỮU (Chỉ Admin hoặc Tác giả mới có nút Sửa/Xóa)
+                                            const authorId = d.authorId || d.author?._id || d.author;
+                                            const isOwnerOrAdmin = user?.role === 'admin' || authorId === user?.id;
+
                                             return (
                                                 <div
                                                     key={idx}
@@ -245,10 +247,14 @@ const ManageMatchups = () => {
                                                             <img src={getImgUrl(enemyHero?.avatar)} alt="enemy" className="enemy-avatar-mini" />
                                                             <strong className="text-red">{enemyHero?.name}</strong>
                                                         </div>
-                                                        <div className="strat-header-actions">
-                                                            <button className="btn-edit-mini btn-transparent-mini" onClick={(e) => { e.stopPropagation(); handleEditClick(d, group.hero._id); }} title="Sửa">✏️</button>
-                                                            <button className="btn-del-mini" onClick={(e) => { e.stopPropagation(); handleDelete(d._id); }} title="Xóa">🗑️</button>
-                                                        </div>
+
+                                                        {/* 🌟 NẾU CÓ QUYỀN THÌ MỚI RENDER NÚT SỬA XÓA */}
+                                                        {isOwnerOrAdmin && (
+                                                            <div className="strat-header-actions">
+                                                                <button className="btn-edit-mini btn-transparent-mini" onClick={(e) => { e.stopPropagation(); handleEditClick(d, group.hero._id); }} title="Sửa">✏️</button>
+                                                                <button className="btn-del-mini" onClick={(e) => { e.stopPropagation(); handleDelete(d._id); }} title="Xóa">🗑️</button>
+                                                            </div>
+                                                        )}
                                                     </div>
                                                     <p className="note-text matchup-note-txt">
                                                         "{d.note}"

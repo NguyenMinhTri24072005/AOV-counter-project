@@ -21,7 +21,6 @@ const ManageStrategies = () => {
     const [isItemModalOpen, setIsItemModalOpen] = useState(false);
     const [viewingStrat, setViewingStrat] = useState(null);
 
-    // 🌟 STATE CHO FORM MODAL
     const [isFormOpen, setIsFormOpen] = useState(false);
     const initialForm = {
         type: 'combo_counter',
@@ -34,7 +33,6 @@ const ManageStrategies = () => {
     const [formData, setFormData] = useState(initialForm);
     const [editingId, setEditingId] = useState(null);
 
-    // STATE CHO BỘ LỌC
     const [searchTerm, setSearchTerm] = useState('');
     const [roleFilter, setRoleFilter] = useState('');
     const [laneFilter, setLaneFilter] = useState('');
@@ -185,6 +183,7 @@ const ManageStrategies = () => {
         if (!window.confirm("Xác nhận hủy bỏ chiến thuật này?")) return;
         try {
             await deleteStrategy(id);
+            toast.success("Đã xóa chiến thuật!");
             loadData();
         } catch (err) {
             toast.error("Lỗi khi xóa");
@@ -256,14 +255,9 @@ const ManageStrategies = () => {
 
     return (
         <div className="admin-manage-container fade-in-anim">
-            {/* TIÊU ĐỀ VÀ NÚT THÊM MỚI */}
             <div className="flex-row-gap" style={{ justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                 <h2 className="admin-page-title m-0-b-5" style={{ marginBottom: 0 }}>🚀 LÒ RÈN CHIẾN THUẬT NÂNG CAO</h2>
-                <button 
-                    onClick={openAddForm} 
-                    className="btn-save" 
-                    style={{ background: '#38bdf8', padding: '10px 20px', borderRadius: '8px' }}
-                >
+                <button onClick={openAddForm} className="btn-save" style={{ background: '#38bdf8', padding: '10px 20px', borderRadius: '8px' }}>
                     ➕ THÊM CHIẾN THUẬT
                 </button>
             </div>
@@ -271,32 +265,16 @@ const ManageStrategies = () => {
             <div className="source-toggle-bar" style={{ marginTop: 0 }}>
                 <button className={`toggle-btn ${viewMode === 'personal' ? 'active personal' : ''}`} onClick={() => setViewMode('personal')}>🛡️ CỦA TÔI</button>
                 <button className={`toggle-btn ${viewMode === 'system' ? 'active system' : ''}`} onClick={() => setViewMode('system')}>🤖 HỆ THỐNG</button>
-                {user?.role === 'admin' && (
-                    <button className={`toggle-btn ${viewMode === 'community' ? 'active community' : ''}`} onClick={() => setViewMode('community')}>👥 CỘNG ĐỒNG</button>
-                )}
+                <button className={`toggle-btn ${viewMode === 'community' ? 'active community' : ''}`} onClick={() => setViewMode('community')}>👥 CỘNG ĐỒNG</button>
             </div>
 
             <div className="filter-bar filter-bar-strat">
-                <input
-                    type="text"
-                    placeholder="🔍 Tìm tên tướng hoặc ghi chú..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="filter-input search-input-large"
-                />
-                <select
-                    value={roleFilter}
-                    onChange={(e) => setRoleFilter(e.target.value)}
-                    className="filter-select select-input-med"
-                >
+                <input type="text" placeholder="🔍 Tìm tên tướng hoặc ghi chú..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="filter-input search-input-large" />
+                <select value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)} className="filter-select select-input-med">
                     <option value="">🛡️ TẤT CẢ VAI TRÒ</option>
                     {allRoles.map(role => <option key={role} value={role}>{role}</option>)}
                 </select>
-                <select
-                    value={laneFilter}
-                    onChange={(e) => setLaneFilter(e.target.value)}
-                    className="filter-select select-input-med"
-                >
+                <select value={laneFilter} onChange={(e) => setLaneFilter(e.target.value)} className="filter-select select-input-med">
                     <option value="">🗺️ TẤT CẢ ĐƯỜNG</option>
                     {allLanes.map(lane => <option key={lane} value={lane}>{lane}</option>)}
                 </select>
@@ -305,55 +283,61 @@ const ManageStrategies = () => {
             <section className="admin-list-section">
                 <div className="strategy-cards-grid">
                     {filteredStrategies.length > 0 ? (
-                        filteredStrategies.map(strat => (
-                            <div
-                                key={strat._id}
-                                className={`strategy-card border-${viewMode} cursor-ptr`}
-                                onClick={() => setViewingStrat(strat)}
-                            >
-                                <div className="strat-header">
-                                    <div className="strat-header-info">
-                                        <span className="strat-type-badge">{getStrategyTitle(strat.type)}</span>
-                                        <span className="score-badge">ĐIỂM: {strat.score || 5}</span>
-                                    </div>
-                                    <div className="strat-header-actions">
-                                        <button className="btn-edit-mini btn-transparent-mini" onClick={(e) => { e.stopPropagation(); handleEditClick(strat); }} title="Sửa">✏️</button>
-                                        <button className="btn-del-mini" onClick={(e) => { e.stopPropagation(); handleDelete(strat._id); }} title="Xóa">🗑️</button>
-                                    </div>
-                                </div>
+                        filteredStrategies.map(strat => {
+                            // 🌟 KIỂM TRA QUYỀN SỞ HỮU TRƯỚC KHI HIỂN THỊ NÚT SỬA/XÓA
+                            const authorId = strat.author?._id || strat.author;
+                            const isOwnerOrAdmin = user?.role === 'admin' || authorId === user?.id;
 
-                                <div className="strat-teams">
-                                    <div className="team-display ally-team">
-                                        {strat.teamA.map((h, i) => (
-                                            <div key={i} className="strat-hero-icon-wrap">
-                                                <img src={getImgUrl(h?.avatar)} alt={h?.name} title={h?.name} />
-                                                <span className="strat-hero-name">{h?.name}</span>
+                            return (
+                                <div key={strat._id} className={`strategy-card border-${viewMode} cursor-ptr`} onClick={() => setViewingStrat(strat)}>
+                                    <div className="strat-header">
+                                        <div className="strat-header-info">
+                                            <span className="strat-type-badge">{getStrategyTitle(strat.type)}</span>
+                                            <span className="score-badge">ĐIỂM: {strat.score || 5}</span>
+                                        </div>
+                                        
+                                        {/* 🌟 NẾU CÓ QUYỀN THÌ MỚI HIỂN THỊ NÚT */}
+                                        {isOwnerOrAdmin && (
+                                            <div className="strat-header-actions">
+                                                <button className="btn-edit-mini btn-transparent-mini" onClick={(e) => { e.stopPropagation(); handleEditClick(strat); }} title="Sửa">✏️</button>
+                                                <button className="btn-del-mini" onClick={(e) => { e.stopPropagation(); handleDelete(strat._id); }} title="Xóa">🗑️</button>
                                             </div>
-                                        ))}
+                                        )}
                                     </div>
 
-                                    {strat.type !== 'synergy' && (
-                                        <>
-                                            <div className="strat-vs-icon">{strat.type === 'skill_matchup' ? '50/50' : 'VS'}</div>
-                                            <div className="team-display enemy-team">
-                                                {strat.teamB.map((h, i) => (
-                                                    <div key={i} className="strat-hero-icon-wrap">
-                                                        <img src={getImgUrl(h?.avatar)} alt={h?.name} title={h?.name} />
-                                                        <span className="strat-hero-name">{h?.name}</span>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </>
-                                    )}
-                                </div>
+                                    <div className="strat-teams">
+                                        <div className="team-display ally-team">
+                                            {strat.teamA.map((h, i) => (
+                                                <div key={i} className="strat-hero-icon-wrap">
+                                                    <img src={getImgUrl(h?.avatar)} alt={h?.name} title={h?.name} />
+                                                    <span className="strat-hero-name">{h?.name}</span>
+                                                </div>
+                                            ))}
+                                        </div>
 
-                                <div className="strat-note">"{strat.note}"</div>
+                                        {strat.type !== 'synergy' && (
+                                            <>
+                                                <div className="strat-vs-icon">{strat.type === 'skill_matchup' ? '50/50' : 'VS'}</div>
+                                                <div className="team-display enemy-team">
+                                                    {strat.teamB.map((h, i) => (
+                                                        <div key={i} className="strat-hero-icon-wrap">
+                                                            <img src={getImgUrl(h?.avatar)} alt={h?.name} title={h?.name} />
+                                                            <span className="strat-hero-name">{h?.name}</span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </>
+                                        )}
+                                    </div>
 
-                                <div className="strat-footer">
-                                    <span className="strat-author">Nguồn: {strat.isSystem ? 'Hệ thống' : strat.author?.username}</span>
+                                    <div className="strat-note">"{strat.note}"</div>
+
+                                    <div className="strat-footer">
+                                        <span className="strat-author">Nguồn: {strat.isSystem ? 'Hệ thống' : strat.author?.username}</span>
+                                    </div>
                                 </div>
-                            </div>
-                        ))
+                            );
+                        })
                     ) : (
                         <div className="empty-state-msg empty-full-span">
                             Không tìm thấy chiến thuật nào phù hợp.
@@ -364,36 +348,19 @@ const ManageStrategies = () => {
 
             <ItemModal isOpen={isItemModalOpen} onClose={() => setIsItemModalOpen(false)} items={items} selectedItems={formData.counterItems} onToggle={handleToggleItem} />
             
-            {/* ==========================================
-                MODAL NHẬP LIỆU (THÊM / SỬA CHIẾN THUẬT)
-            ========================================== */}
+            {/* 🌟 MODAL FORM THÊM / SỬA CHIẾN THUẬT (POPUP) 🌟 */}
             {isFormOpen && (
                 <div className="card-detail-overlay" onClick={closeFormModal} style={{ zIndex: 10000 }}>
-                    <div 
-                        className="cyber-panel strat-modal-panel" 
-                        onClick={e => e.stopPropagation()} 
-                        style={{ 
-                            background: '#0f172a', width: '90%', maxWidth: '850px', maxHeight: '90vh', 
-                            padding: '30px', borderRadius: '12px', overflowY: 'auto', 
-                            border: `2px solid ${editingId ? '#f59e0b' : '#38bdf8'}`,
-                            position: 'relative'
-                        }}
-                    >
+                    <div className="cyber-panel strat-modal-panel" onClick={e => e.stopPropagation()} style={{ background: '#0f172a', width: '90%', maxWidth: '850px', maxHeight: '90vh', padding: '30px', borderRadius: '12px', overflowY: 'auto', border: `2px solid ${editingId ? '#f59e0b' : '#38bdf8'}`, position: 'relative' }}>
                         <button className="close-modal-btn" onClick={closeFormModal}>×</button>
                         <h2 style={{ color: editingId ? '#f59e0b' : '#38bdf8', marginBottom: '25px', fontFamily: 'Oswald', textTransform: 'uppercase' }}>
                             {editingId ? `✏️ CẬP NHẬT CHIẾN THUẬT` : '➕ THÊM CHIẾN THUẬT MỚI'}
                         </h2>
 
                         <div className="strategy-type-selector">
-                            <button type="button" className={`btn-strat-type ${formData.type === 'combo_counter' ? 'active' : ''}`} onClick={() => handleTypeChange('combo_counter')}>
-                                🛡️ ĐỘI HÌNH KHẮC CHẾ
-                            </button>
-                            <button type="button" className={`btn-strat-type ${formData.type === 'synergy' ? 'active' : ''}`} onClick={() => handleTypeChange('synergy')}>
-                                🤝 KẾT HỢP ĐỒNG ĐỘI
-                            </button>
-                            <button type="button" className={`btn-strat-type ${formData.type === 'skill_matchup' ? 'active' : ''}`} onClick={() => handleTypeChange('skill_matchup')}>
-                                ⚔️ KÈO KỸ NĂNG 1v1
-                            </button>
+                            <button type="button" className={`btn-strat-type ${formData.type === 'combo_counter' ? 'active' : ''}`} onClick={() => handleTypeChange('combo_counter')}>🛡️ ĐỘI HÌNH KHẮC CHẾ</button>
+                            <button type="button" className={`btn-strat-type ${formData.type === 'synergy' ? 'active' : ''}`} onClick={() => handleTypeChange('synergy')}>🤝 KẾT HỢP ĐỒNG ĐỘI</button>
+                            <button type="button" className={`btn-strat-type ${formData.type === 'skill_matchup' ? 'active' : ''}`} onClick={() => handleTypeChange('skill_matchup')}>⚔️ KÈO KỸ NĂNG 1v1</button>
                         </div>
 
                         <form onSubmit={handleSubmit} className="cyber-form-layout mt-25">
@@ -417,11 +384,7 @@ const ManageStrategies = () => {
                                 <span className="slot-title yellow">ĐÁNH GIÁ ĐỘ HIỆU QUẢ CỦA CHIẾN THUẬT NÀY (1-5)</span>
                                 <div className="cyber-score-bar cyber-score-center">
                                     {[1, 2, 3, 4, 5].map(num => (
-                                        <button
-                                            key={num} type="button"
-                                            className={`score-node ${formData.score === num ? 'active' : ''}`}
-                                            onClick={() => setFormData({ ...formData, score: num })}
-                                        >
+                                        <button key={num} type="button" className={`score-node ${formData.score === num ? 'active' : ''}`} onClick={() => setFormData({ ...formData, score: num })}>
                                             {num}
                                         </button>
                                     ))}
@@ -431,19 +394,12 @@ const ManageStrategies = () => {
                             <div className="form-bottom-row mt-20">
                                 <div className="textarea-wrap flex-2">
                                     <label className="slot-title">PHÂN TÍCH CÁCH VẬN HÀNH:</label>
-                                    <textarea value={formData.note} required
-                                        onChange={e => setFormData({ ...formData, note: e.target.value })}
-                                        placeholder={formData.type === 'synergy' ? "VD: Zata bay lên trời, Dolia buff chiêu cuối để Zata bay lần 2..." : "VD: Chờ đối phương xả hết khống chế rồi lao vào..."}
-                                        className="form-textarea strategy-note-area"
-                                    />
+                                    <textarea value={formData.note} required onChange={e => setFormData({ ...formData, note: e.target.value })} placeholder={formData.type === 'synergy' ? "VD: Zata bay lên trời, Dolia buff chiêu cuối để Zata bay lần 2..." : "VD: Chờ đối phương xả hết khống chế rồi lao vào..."} className="form-textarea strategy-note-area" />
                                 </div>
-
                                 <div className="items-selector-wrap flex-1">
                                     <label className="slot-title">TRANG BỊ LÕI ({formData.counterItems.length}):</label>
                                     <div className="selected-items-row items-col-layout">
-                                        <button type="button" className="btn-open-item-modal btn-full" onClick={() => setIsItemModalOpen(true)}>
-                                            ➕ Chọn Trang Bị
-                                        </button>
+                                        <button type="button" className="btn-open-item-modal btn-full" onClick={() => setIsItemModalOpen(true)}>➕ Chọn Trang Bị</button>
                                         <div className="mini-item-list mini-item-wrap">
                                             {formData.counterItems.map(itemId => {
                                                 const it = items.find(i => i._id === itemId);
@@ -456,13 +412,9 @@ const ManageStrategies = () => {
 
                             <div className="form-submit-row">
                                 <button type="submit" className={`btn-cyber btn-submit-large ${editingId ? 'bg-amber' : 'bg-emerald'}`} style={{ color: '#000' }}>
-                                    {editingId ? '🔄 CẬP NHẬT CHIẾN THUẬT' : (formData.type === 'synergy' ? 'LƯU COMBO ĐỒNG ĐỘI' : 'LƯU CHIẾN THUẬT ĐỐI ĐẦU')}
+                                    {editingId ? '🔄 CẬP NHẬT CHIẾN THUẬT' : 'LƯU VÀO KHO CHIẾN THUẬT'}
                                 </button>
-                                {editingId && (
-                                    <button type="button" className="btn-cyber btn-cancel btn-submit-large" onClick={closeFormModal}>
-                                        ❌ HỦY CHỈNH SỬA
-                                    </button>
-                                )}
+                                {editingId && <button type="button" className="btn-cyber btn-cancel btn-submit-large" onClick={closeFormModal}>❌ HỦY</button>}
                             </div>
                         </form>
                     </div>
