@@ -6,7 +6,6 @@ import HeroSelect from '../../components/HeroSelect';
 import ItemModal from '../../components/ItemModal';
 import './Admin.css';
 
-
 const getImgUrl = (url) => {
     if (!url) return 'https://placehold.co/50x50?text=Hero';
     if (url.startsWith('http') || url.startsWith('data:')) return url;
@@ -23,6 +22,11 @@ const ManageMatchups = () => {
     const [viewingDetail, setViewingDetail] = useState(null);
 
     const [isLoading, setIsLoading] = useState(false);
+
+    // State phân trang
+    const [page, setPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
+    const [limit] = useState(20);
 
     const [searchTerm, setSearchTerm] = useState('');
     const [roleFilter, setRoleFilter] = useState('');
@@ -41,28 +45,39 @@ const ManageMatchups = () => {
 
     useEffect(() => {
         if (user) {
-            loadData();
+            loadData(1);
         }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [user]);
 
-    const loadData = async () => {
+    const loadData = async (currentPage = page) => {
         setIsLoading(true);
         try {
             const [hRes, iRes, mRes] = await Promise.all([
                 getHeroes(),
                 getItems(),
-                getCounters([], [], 'all')
+                getCounters([], [], 'all', null, currentPage, limit) // Truyền param phân trang
             ]);
 
-            setHeroes(hRes.data.data ? hRes.data.data : hRes.data);
-            setItems(iRes.data.data ? iRes.data.data : iRes.data);
-            setMatchups(mRes.data.data ? mRes.data.data : mRes.data);
+            setHeroes(hRes.data?.data ? hRes.data.data : hRes.data);
+            setItems(iRes.data?.data ? iRes.data.data : iRes.data);
+            
+            setMatchups(mRes.data?.data ? mRes.data.data : mRes.data);
+            
+            if (mRes.data?.pagination) {
+                setTotalPages(mRes.data.pagination.totalPages);
+            }
             
         } catch (error) {
             console.error("Lỗi tải dữ liệu:", error);
         } finally {
             setIsLoading(false);
+        }
+    };
+
+    const handlePageChange = (newPage) => {
+        if (newPage >= 1 && newPage <= totalPages) {
+            setPage(newPage);
+            loadData(newPage);
         }
     };
 
@@ -120,9 +135,8 @@ const ManageMatchups = () => {
             }
 
             closeFormModal();
-            loadData();
+            loadData(page); // Load lại trang hiện tại
         } catch (err) {
-            console.error("Lỗi Submit Matchup:", err);
             toast.error(err.response?.data?.message || "Lỗi xử lý");
         }
     };
@@ -132,7 +146,7 @@ const ManageMatchups = () => {
         if (!window.confirm("Xác nhận xóa chiến thuật này?")) return;
         try {
             await deleteMatchup(id);
-            loadData();
+            loadData(page);
         } catch (err) {
             toast.error("Lỗi khi xóa");
         }
@@ -164,10 +178,10 @@ const ManageMatchups = () => {
 
         const fullHero = heroes.find(h => h._id === group.hero._id);
 
-        const matchName = group.hero.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        const matchName = group.hero.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
             group.matchupDetails.some(d => {
                 const enemy = heroes.find(h => h._id === d.enemyId);
-                return enemy?.name.toLowerCase().includes(searchTerm.toLowerCase());
+                return enemy?.name?.toLowerCase().includes(searchTerm.toLowerCase());
             });
 
         const matchRole = roleFilter ? fullHero?.roles?.some(r => (r.name || r) === roleFilter || r._id === roleFilter) : true;
@@ -183,7 +197,7 @@ const ManageMatchups = () => {
                 <button 
                     onClick={openAddForm} 
                     className="btn-save" 
-                    style={{ background: '#38bdf8', padding: '10px 20px', borderRadius: '8px' }}
+                    style={{ background: '#38bdf8', padding: '10px 20px', borderRadius: '8px', color: '#000', fontWeight: 'bold', border: 'none', cursor: 'pointer' }}
                 >
                     ➕ THÊM BÍ KÍP 1V1
                 </button>
@@ -198,7 +212,7 @@ const ManageMatchups = () => {
             </div>
 
             <div className="filter-bar filter-bar-strat">
-                <input type="text" placeholder="🔍 Tìm tên tướng (Địch hoặc Ta)..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="filter-input flex-1" />
+                <input type="text" placeholder="🔍 Tìm tên tướng (ở trang hiện tại)..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="filter-input flex-1" />
                 <select value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)} className="filter-select">
                     <option value="">🛡️ TẤT CẢ VAI TRÒ</option>
                     {allRoles.map(role => <option key={role} value={role}>{role}</option>)}
@@ -213,77 +227,89 @@ const ManageMatchups = () => {
                 {isLoading ? (
                     <div className="cyber-scanning-mini"><div className="scan-line"></div>ĐANG TRUY XUẤT DỮ LIỆU...</div>
                 ) : (
-                    <div className="matchup-cards-grid">
-                        {filteredResults.length > 0 ? (
-                            filteredResults.map(group => (
-                                <div key={group.hero._id} className={`matchup-admin-card ${viewMode === 'personal' ? 'border-personal' : (viewMode === 'system' ? 'border-system' : 'border-community')}`}>
-                                    <div className="card-top border-b-glass">
-                                        <div className="hero-meta">
-                                            <img src={getImgUrl(group.hero.avatar)} alt="hero" className="main-hero-img" />
-                                            <div className="hero-meta-info">
-                                                <h4 className="m-0-b-5">{group.hero.name}</h4>
-                                                <span className="score-label">Trung bình: {group.totalScore}đ</span>
+                    <>
+                        <div className="matchup-cards-grid">
+                            {filteredResults.length > 0 ? (
+                                filteredResults.map(group => (
+                                    <div key={group.hero._id} className={`matchup-admin-card ${viewMode === 'personal' ? 'border-personal' : (viewMode === 'system' ? 'border-system' : 'border-community')}`}>
+                                        <div className="card-top border-b-glass">
+                                            <div className="hero-meta">
+                                                <img src={getImgUrl(group.hero.avatar)} alt="hero" className="main-hero-img" />
+                                                <div className="hero-meta-info">
+                                                    <h4 className="m-0-b-5">{group.hero.name}</h4>
+                                                    <span className="score-label">Trung bình: {group.totalScore}đ</span>
+                                                </div>
                                             </div>
                                         </div>
-                                    </div>
 
-                                    <div className="card-details">
-                                        {group.matchupDetails.map((d, idx) => {
-                                            const enemyHero = heroes.find(h => h._id === d.enemyId);
+                                        <div className="card-details">
+                                            {group.matchupDetails.map((d, idx) => {
+                                                const enemyHero = heroes.find(h => h._id === d.enemyId);
+                                                const authorId = d.authorId || d.author?._id || d.author;
+                                                const isOwnerOrAdmin = user?.role === 'admin' || authorId === user?.id;
 
-                                            // 🌟 KIỂM TRA QUYỀN SỞ HỮU (Chỉ Admin hoặc Tác giả mới có nút Sửa/Xóa)
-                                            const authorId = d.authorId || d.author?._id || d.author;
-                                            const isOwnerOrAdmin = user?.role === 'admin' || authorId === user?.id;
-
-                                            return (
-                                                <div
-                                                    key={idx}
-                                                    className="detail-item-box matchup-clickable-card"
-                                                    onClick={() => setViewingDetail({ ...d, mainHero: group.hero })}
-                                                >
-                                                    <div className="detail-item-header flex-between">
-                                                        <div className="enemy-info-mini flex-align-center gap-8">
-                                                            <span className="txt-13 text-slate">Khắc chế:</span>
-                                                            <img src={getImgUrl(enemyHero?.avatar)} alt="enemy" className="enemy-avatar-mini" />
-                                                            <strong className="text-red">{enemyHero?.name}</strong>
-                                                        </div>
-
-                                                        {/* 🌟 NẾU CÓ QUYỀN THÌ MỚI RENDER NÚT SỬA XÓA */}
-                                                        {isOwnerOrAdmin && (
-                                                            <div className="strat-header-actions">
-                                                                <button className="btn-edit-mini btn-transparent-mini" onClick={(e) => { e.stopPropagation(); handleEditClick(d, group.hero._id); }} title="Sửa">✏️</button>
-                                                                <button className="btn-del-mini" onClick={(e) => { e.stopPropagation(); handleDelete(d._id); }} title="Xóa">🗑️</button>
+                                                return (
+                                                    <div key={idx} className="detail-item-box matchup-clickable-card" onClick={() => setViewingDetail({ ...d, mainHero: group.hero })}>
+                                                        <div className="detail-item-header flex-between">
+                                                            <div className="enemy-info-mini flex-align-center gap-8">
+                                                                <span className="txt-13 text-slate">Khắc chế:</span>
+                                                                <img src={getImgUrl(enemyHero?.avatar)} alt="enemy" className="enemy-avatar-mini" />
+                                                                <strong className="text-red">{enemyHero?.name}</strong>
                                                             </div>
+                                                            {isOwnerOrAdmin && (
+                                                                <div className="strat-header-actions">
+                                                                    <button className="btn-edit-mini btn-transparent-mini" onClick={(e) => { e.stopPropagation(); handleEditClick(d, group.hero._id); }} title="Sửa">✏️</button>
+                                                                    <button className="btn-del-mini" onClick={(e) => { e.stopPropagation(); handleDelete(d._id); }} title="Xóa">🗑️</button>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                        <p className="note-text matchup-note-txt">"{d.note}"</p>
+                                                        {viewMode === 'community' && (
+                                                            <span className="matchup-author-txt">Bởi: {d.authorName || 'Người chơi'}</span>
                                                         )}
                                                     </div>
-                                                    <p className="note-text matchup-note-txt">
-                                                        "{d.note}"
-                                                    </p>
-                                                    {viewMode === 'community' && (
-                                                        <span className="matchup-author-txt">
-                                                            Bởi: {d.authorName || 'Người chơi'}
-                                                        </span>
-                                                    )}
-                                                </div>
-                                            );
-                                        })}
+                                                );
+                                            })}
+                                        </div>
                                     </div>
+                                ))
+                            ) : (
+                                <div className="empty-state-msg empty-full-span p-40">
+                                    <p>Không tìm thấy chiến thuật nào ở trang này.</p>
                                 </div>
-                            ))
-                        ) : (
-                            <div className="empty-state-msg empty-full-span p-40">
-                                <p>Không tìm thấy chiến thuật nào phù hợp với bộ lọc.</p>
+                            )}
+                        </div>
+
+                        {/* BỘ NÚT ĐIỀU HƯỚNG PHÂN TRANG */}
+                        {totalPages > 1 && (
+                            <div className="pagination-controls" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '15px', marginTop: '30px' }}>
+                                <button 
+                                    disabled={page === 1} 
+                                    onClick={() => handlePageChange(page - 1)}
+                                    style={{ padding: '8px 20px', background: page === 1 ? '#334155' : 'transparent', color: page === 1 ? '#94a3b8' : '#38bdf8', border: '1px solid #38bdf8', borderRadius: '6px', cursor: page === 1 ? 'not-allowed' : 'pointer' }}
+                                >
+                                    ⬅️ TRƯỚC
+                                </button>
+                                
+                                <span style={{ padding: '8px 20px', background: '#0f172a', color: '#fff', border: '1px solid #1e293b', borderRadius: '6px', fontWeight: 'bold' }}>
+                                    TRANG {page} / {totalPages}
+                                </span>
+
+                                <button 
+                                    disabled={page === totalPages} 
+                                    onClick={() => handlePageChange(page + 1)}
+                                    style={{ padding: '8px 20px', background: page === totalPages ? '#334155' : 'transparent', color: page === totalPages ? '#94a3b8' : '#38bdf8', border: '1px solid #38bdf8', borderRadius: '6px', cursor: page === totalPages ? 'not-allowed' : 'pointer' }}
+                                >
+                                    SAU ➡️
+                                </button>
                             </div>
                         )}
-                    </div>
+                    </>
                 )}
             </section>
 
             <ItemModal isOpen={isItemModalOpen} onClose={() => setIsItemModalOpen(false)} items={items} selectedItems={formData.counterItems} onToggle={handleToggleItem} />
 
-            {/* ==========================================
-                MODAL NHẬP LIỆU (THÊM / SỬA KÈO 1V1)
-            ========================================== */}
             {isFormOpen && (
                 <div className="card-detail-overlay" onClick={closeFormModal} style={{ zIndex: 10000 }}>
                     <div 
@@ -292,8 +318,7 @@ const ManageMatchups = () => {
                         style={{ 
                             background: '#0f172a', width: '90%', maxWidth: '800px', maxHeight: '90vh', 
                             padding: '30px', borderRadius: '12px', overflowY: 'auto', 
-                            border: `2px solid ${editingId ? '#f59e0b' : '#38bdf8'}`,
-                            position: 'relative'
+                            border: `2px solid ${editingId ? '#f59e0b' : '#38bdf8'}`, position: 'relative'
                         }}
                     >
                         <button className="close-modal-btn" onClick={closeFormModal}>×</button>
@@ -307,21 +332,17 @@ const ManageMatchups = () => {
                                     <span className="slot-title red">ĐỐI THỦ (BỊ KHẮC CHẾ)</span>
                                     <HeroSelect heroes={heroes} selectedHeroId={formData.enemyHeroId} isEnemy={true} onChange={id => setFormData({ ...formData, enemyHeroId: id })} />
                                 </div>
-
                                 <div className="vs-logo">VS</div>
-
                                 <div className="slot-item">
                                     <span className="slot-title blue">TƯỚNG CỦA BẠN (PICK)</span>
                                     <HeroSelect heroes={heroes} selectedHeroId={formData.heroId} onChange={id => setFormData({ ...formData, heroId: id })} />
                                 </div>
-
                                 <div className="score-picker-column">
                                     <span className="slot-title yellow">ĐIỂM KHẮC CHẾ (1-5)</span>
                                     <div className="cyber-score-bar">
                                         {[1, 2, 3, 4, 5].map(num => (
                                             <button
-                                                key={num}
-                                                type="button"
+                                                key={num} type="button"
                                                 className={`score-node ${formData.score === num ? 'active' : ''}`}
                                                 onClick={() => setFormData({ ...formData, score: num })}
                                             >
@@ -337,17 +358,13 @@ const ManageMatchups = () => {
                                     <label className="slot-title">GHI CHÚ CHIẾN THUẬT:</label>
                                     <textarea value={formData.note} required
                                         onChange={e => setFormData({ ...formData, note: e.target.value })}
-                                        placeholder="Mô tả chi tiết cách thức khắc chế..."
-                                        className="form-textarea matchup-textarea"
+                                        placeholder="Mô tả chi tiết cách thức khắc chế..." className="form-textarea matchup-textarea"
                                     />
                                 </div>
-
                                 <div className="items-selector-wrap flex-1">
                                     <label className="slot-title">TRANG BỊ ({formData.counterItems.length}):</label>
                                     <div className="selected-items-row items-col-layout">
-                                        <button type="button" className="btn-open-item-modal btn-full" onClick={() => setIsItemModalOpen(true)}>
-                                            ➕ Chọn Trang Bị
-                                        </button>
+                                        <button type="button" className="btn-open-item-modal btn-full" onClick={() => setIsItemModalOpen(true)}>➕ Chọn Trang Bị</button>
                                         <div className="mini-item-list mini-item-wrap">
                                             {formData.counterItems.map(itemId => {
                                                 const it = items.find(i => i._id === itemId);
@@ -363,9 +380,7 @@ const ManageMatchups = () => {
                                     {editingId ? '🔄 CẬP NHẬT CHIẾN THUẬT' : 'XÁC NHẬN LƯU CHIẾN THUẬT'}
                                 </button>
                                 {editingId && (
-                                    <button type="button" className="btn-cyber btn-cancel btn-submit-large" onClick={closeFormModal}>
-                                        ❌ HỦY CHỈNH SỬA
-                                    </button>
+                                    <button type="button" className="btn-cyber btn-cancel btn-submit-large" onClick={closeFormModal}>❌ HỦY CHỈNH SỬA</button>
                                 )}
                             </div>
                         </form>
@@ -373,7 +388,6 @@ const ManageMatchups = () => {
                 </div>
             )}
 
-            {/* 🌟 MODAL CHI TIẾT KÈO KHẮC CHẾ (KHI BẤM VÀO CARD ĐỂ XEM) 🌟 */}
             {viewingDetail && (
                 <div className="hero-detail-overlay" onClick={() => setViewingDetail(null)}>
                     <div className="hero-detail-modal cyber-panel matchup-modal-panel" onClick={e => e.stopPropagation()}>
@@ -394,9 +408,7 @@ const ManageMatchups = () => {
 
                         <div className="modal-body-scroll p-25">
                             <h3 className="section-title border-l-amber">💡 PHƯƠNG PHÁP KHẮC CHẾ</h3>
-                            <div className="matchup-modal-note-box">
-                                {viewingDetail.note}
-                            </div>
+                            <div className="matchup-modal-note-box">{viewingDetail.note}</div>
 
                             <h3 className="section-title border-l-emerald">⚔️ TRANG BỊ KHUYÊN DÙNG</h3>
                             <div className="matchup-modal-items-grid">

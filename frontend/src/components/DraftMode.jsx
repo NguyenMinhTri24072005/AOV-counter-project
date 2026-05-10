@@ -84,16 +84,19 @@ const DraftMode = ({ heroes }) => {
             try {
                 if (validPicksEnemy.length > 0) {
                     const resEnemy = await getCounters(validPicksEnemy, [], viewMode, user?.id);
-                    setAllEnemyCounters(resEnemy.data);
+                    // FIX: Lấy dữ liệu từ .data.data do API đã thay đổi cấu trúc trả về
+                    setAllEnemyCounters(resEnemy.data?.data ? resEnemy.data.data : resEnemy.data || []);
                 } else setAllEnemyCounters([]);
 
                 if (validPicksAlly.length > 0) {
                     const resAlly = await getCounters(validPicksAlly, [], viewMode, user?.id);
-                    setAllAllyCounters(resAlly.data);
+                    // FIX tương tự
+                    setAllAllyCounters(resAlly.data?.data ? resAlly.data.data : resAlly.data || []);
                 } else setAllAllyCounters([]);
 
                 const resStrats = await getStrategies(viewMode, user?.id);
-                setAdvancedStrategies(resStrats.data);
+                // FIX nguyên nhân gây lỗi forEach
+                setAdvancedStrategies(resStrats.data?.data ? resStrats.data.data : resStrats.data || []);
 
             } catch (error) {
                 console.error("Lỗi phân tích đội hình:", error);
@@ -103,7 +106,7 @@ const DraftMode = ({ heroes }) => {
         };
         fetchAllRelations();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [picksEnemy, picksAlly, viewMode, user]); 
+    }, [picksEnemy, picksAlly, viewMode, user]);
 
     // --- LOGIC PHÂN TÍCH 1V1 ---
     const isEnemyCounteredByAlly = (enemyId) => allEnemyCounters.some(c => validPicksAlly.includes(c.hero._id) && c.matchupDetails.some(d => d.enemyId === enemyId));

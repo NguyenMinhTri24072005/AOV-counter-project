@@ -11,30 +11,24 @@ const createStrategy = async (req, res) => {
     }
 };
 
-
 const getStrategies = async (req, res) => {
     try {
-        // Nhận toàn bộ từ req.body (Vì route của bạn là POST /filter)
-        const { mode = 'standard', userId = null, currentUserId = null } = req.body;
+        // Bổ sung page và limit từ req.body
+        const { mode = 'standard', userId = null, currentUserId = null, page = 1, limit = 20 } = req.body;
         
-        // 1. XÂY DỰNG ĐIỀU KIỆN QUYỀN RIÊNG TƯ
-        // Phải là công khai HOẶC là dữ liệu cũ chưa có trường này
         const visibilityConditions = [
             { visibility: 'public' },
             { visibility: { $exists: false } } 
         ];
 
-        // Nếu người dùng đang đăng nhập, cho phép họ xem thêm chiến thuật private của chính họ
         if (currentUserId) {
             visibilityConditions.push({ author: currentUserId });
         }
 
-        // Khởi tạo query với điều kiện BẮT BUỘC về quyền riêng tư
         const query = {
             $and: [ { $or: visibilityConditions } ]
         };
 
-        // 2. XỬ LÝ BỘ LỌC THEO NGUỒN (Hệ thống / Cá nhân / Cộng đồng)
         const Admin = await User.findOne({ role: 'admin' });
         const adminId = Admin?._id;
         
@@ -45,35 +39,45 @@ const getStrategies = async (req, res) => {
         } else if (mode === 'custom' && userId) {
             authorQuery.author = userId;
         } else if (mode === 'compare') {
-            // Dùng filter(Boolean) để lọc bỏ nếu userId hoặc adminId bị null
             authorQuery.author = { $in: [adminId, userId].filter(Boolean) }; 
         } else if (mode === 'community' && adminId) {
             authorQuery.author = { $ne: adminId }; 
         }
 
-        // Nếu có điều kiện về tác giả thì nhét thêm vào $and để gộp chung với quyền riêng tư
         if (Object.keys(authorQuery).length > 0) {
             query.$and.push(authorQuery);
         }
 
-        // 3. THỰC THI TRUY VẤN VÀ LẤY DỮ LIỆU ĐẦY ĐỦ
+        // Tính toán phân trang
+        const skip = (page - 1) * limit;
+        const totalItems = await Strategy.countDocuments(query);
+
         const strategies = await Strategy.find(query)
-            // SỬA LỖI: Tên trường trong Model là 'roles' (có s) và thêm 'lane'
             .populate('teamA', 'name avatar roles lane') 
             .populate('teamB', 'name avatar roles lane')
-            // Thêm giá tiền (price) để Modal hiển thị giá trang bị chuẩn xác
             .populate('counterItems', 'name icon passive price') 
             .populate('author', 'username role')
-            .sort({ createdAt: -1 });
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limit);
 
-        // 4. GẮN CỜ NHẬN DIỆN CHO FRONTEND
         const formattedStrategies = strategies.map(strat => {
             const stratObj = strat.toObject();
             stratObj.isSystem = stratObj.author?.role === 'admin';
             return stratObj;
         });
 
-        res.status(200).json(formattedStrategies);
+        // Trả về dữ liệu kèm theo Meta Data Phân Trang
+        res.status(200).json({
+            success: true,
+            data: formattedStrategies,
+            pagination: {
+                totalItems,
+                currentPage: parseInt(page),
+                totalPages: Math.ceil(totalItems / limit),
+                limit: parseInt(limit)
+            }
+        });
     } catch (error) {
         res.status(500).json({ message: 'Lỗi xử lý lấy chiến thuật: ' + error.message });
     }
@@ -100,6 +104,7 @@ const deleteStrategy = async (req, res) => {
         res.status(500).json({ message: error.message }); 
     }
 };
+
 const updateStrategy = async (req, res) => {
     try {
         const updatedStrategy = await Strategy.findByIdAndUpdate(req.params.id, req.body, { new: true });

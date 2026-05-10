@@ -1,4 +1,5 @@
 const Matchup = require('../models/Matchup')
+const User = require('../models/User')
 
 const createMatchup = async (req, res) => {
     try {
@@ -12,13 +13,11 @@ const createMatchup = async (req, res) => {
 
 const getRecommendations = async (req, res) => {
     try {
-        const { enemyIds = [], excludedIds = [], mode = 'standard', userId = null } = req.body;
-        
-        // 1. Khởi tạo Object query rỗng
-        let query = {};
+        // Nhận thêm page và limit từ Frontend
+        const { enemyIds = [], excludedIds = [], mode = 'standard', userId = null, page = 1, limit = 20 } = req.body;
 
-        // 2. Xây dựng bộ lọc Author dựa trên Mode
-        const Admin = await require('../models/User').findOne({ role: 'admin' });
+        let query = {};
+        const Admin = await User.findOne({ role: 'admin' });
         const adminId = Admin?._id;
 
         if (mode === 'standard') {
@@ -26,23 +25,36 @@ const getRecommendations = async (req, res) => {
         } else if (mode === 'custom') {
             query.author = userId;
         } else if (mode === 'compare') {
-            query.author = { $in: [adminId, userId] };
+            query.author = { $in: [adminId, userId].filter(Boolean) };
         }
-        // Nếu mode là 'pro', chúng ta không đặt query.author để lấy TOÀN BỘ kèo.
 
-        // 3. FIX LỖI TẠI ĐÂY: Chỉ lọc theo enemyHeroId nếu mảng enemyIds thực sự có phần tử
         if (enemyIds && enemyIds.length > 0) {
             query.enemyHeroId = { $in: enemyIds };
         }
 
-        // 4. Tìm kèo với bộ lọc đã được xử lý chuẩn
-        const matchups = await Matchup.find(query)
-            .populate('counterHeroId', 'name avatar role')
+        // Tính toán phân trang
+        const skip = (page - 1) * limit;
+        
+        let matchupsQuery = Matchup.find(query)
+            .populate('counterHeroId', 'name avatar roles lane')
+            .populate('enemyHeroId', 'name avatar') // Lấy thêm info địch
             .populate('counterItems', 'name icon passive')
-            .populate('author', 'username role');
+            .populate('author', 'username role')
+            .sort({ createdAt: -1 });
+
+        let totalItems = 0;
+
+        // Nếu là Admin tải dữ liệu Quản lý (mode = 'all') thì áp dụng phân trang Backend
+        if (mode === 'all') {
+            totalItems = await Matchup.countDocuments(query);
+            matchupsQuery = matchupsQuery.skip(skip).limit(limit);
+        }
+
+        const matchups = await matchupsQuery.exec();
 
         const counterMap = {};
         matchups.forEach(match => {
+            if (!match.counterHeroId) return; 
             const counterId = match.counterHeroId._id.toString();
             if (excludedIds.includes(counterId)) return;
 
@@ -56,17 +68,17 @@ const getRecommendations = async (req, res) => {
             }
 
             counterMap[counterId].totalScore += match.score;
-            match.counterItems.forEach(item => counterMap[counterId].recommendedItems.add(item));
+            if(match.counterItems) {
+                match.counterItems.forEach(item => counterMap[counterId].recommendedItems.add(item));
+            }
 
-            // Gom nhóm chi tiết các tướng bị khắc chế
             counterMap[counterId].matchupDetails.push({
                 _id: match._id,
-                enemyId: match.enemyHeroId,
+                enemyId: match.enemyHeroId?._id || match.enemyHeroId,
                 score: match.score,
                 note: match.note,
-                // BỔ SUNG DÒNG NÀY ĐỂ LẤY ITEM CHO TÍNH NĂNG EDIT
                 counterItems: match.counterItems ? match.counterItems.map(i => i._id || i) : [], 
-                authorName: match.author?.username || 'Người dùng ẩn danh',
+                authorName: match.author?.username || 'Người chơi',
                 authorId: match.author?._id,
                 isSystem: match.author?.role === 'admin'
             });
@@ -75,8 +87,18 @@ const getRecommendations = async (req, res) => {
         const sortedCounters = Object.values(counterMap)
             .map(c => ({ ...c, recommendedItems: Array.from(c.recommendedItems) }))
             .sort((a, b) => b.totalScore - a.totalScore);
-            
-        res.status(200).json(sortedCounters);
+
+        // Trả về kèm theo Meta Data Phân Trang
+        res.status(200).json({
+            success: true,
+            data: sortedCounters,
+            pagination: mode === 'all' ? {
+                totalItems,
+                currentPage: parseInt(page),
+                totalPages: Math.ceil(totalItems / limit),
+                limit: parseInt(limit)
+            } : null
+        });
     } catch (error) {
         res.status(500).json({ message: 'Lỗi xử lý: ' + error.message });
     }

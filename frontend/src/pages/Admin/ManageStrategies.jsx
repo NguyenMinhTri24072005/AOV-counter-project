@@ -21,6 +21,11 @@ const ManageStrategies = () => {
     const [isItemModalOpen, setIsItemModalOpen] = useState(false);
     const [viewingStrat, setViewingStrat] = useState(null);
 
+    // State phân trang
+    const [page, setPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
+    const [limit] = useState(20);
+
     const [isFormOpen, setIsFormOpen] = useState(false);
     const initialForm = {
         type: 'combo_counter',
@@ -38,24 +43,36 @@ const ManageStrategies = () => {
     const [laneFilter, setLaneFilter] = useState('');
 
     useEffect(() => {
-        if (user) loadData();
+        if (user) loadData(1);
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [user]);
 
-    const loadData = async () => {
+    const loadData = async (currentPage = page) => {
         try {
             const [hRes, iRes, sRes] = await Promise.all([
                 getHeroes(),
                 getItems(),
-                getStrategies('pro', user?.id)
+                getStrategies('pro', user?.id, currentPage, limit) // Gọi API với phân trang
             ]);
             
-            setHeroes(hRes.data.data ? hRes.data.data : hRes.data);
-            setItems(iRes.data.data ? iRes.data.data : iRes.data);
-            setStrategies(sRes.data.data ? sRes.data.data : sRes.data);
+            setHeroes(hRes.data?.data ? hRes.data.data : hRes.data);
+            setItems(iRes.data?.data ? iRes.data.data : iRes.data);
+            
+            setStrategies(sRes.data?.data ? sRes.data.data : sRes.data);
+
+            if (sRes.data?.pagination) {
+                setTotalPages(sRes.data.pagination.totalPages);
+            }
             
         } catch (err) {
             console.error("Lỗi khi tải dữ liệu: ", err);
+        }
+    };
+
+    const handlePageChange = (newPage) => {
+        if (newPage >= 1 && newPage <= totalPages) {
+            setPage(newPage);
+            loadData(newPage);
         }
     };
 
@@ -87,7 +104,7 @@ const ManageStrategies = () => {
 
         const matchName = searchTerm === '' ||
             strat.note.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            fullHeroesInStrat.some(h => h.name.toLowerCase().includes(searchTerm.toLowerCase()));
+            fullHeroesInStrat.some(h => h.name?.toLowerCase().includes(searchTerm.toLowerCase()));
 
         const matchRole = roleFilter === '' ||
             fullHeroesInStrat.some(h => h.roles?.some(r => (r.name || r) === roleFilter || r._id === roleFilter));
@@ -172,9 +189,8 @@ const ManageStrategies = () => {
             }
 
             closeFormModal();
-            loadData();
+            loadData(page); // Load lại dữ liệu trang hiện tại
         } catch (err) {
-            console.error("Lỗi lưu Strategy:", err);
             toast.error(err.response?.data?.message || "Lỗi lưu chiến thuật");
         }
     };
@@ -184,7 +200,7 @@ const ManageStrategies = () => {
         try {
             await deleteStrategy(id);
             toast.success("Đã xóa chiến thuật!");
-            loadData();
+            loadData(page);
         } catch (err) {
             toast.error("Lỗi khi xóa");
         }
@@ -257,7 +273,7 @@ const ManageStrategies = () => {
         <div className="admin-manage-container fade-in-anim">
             <div className="flex-row-gap" style={{ justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                 <h2 className="admin-page-title m-0-b-5" style={{ marginBottom: 0 }}>🚀 LÒ RÈN CHIẾN THUẬT NÂNG CAO</h2>
-                <button onClick={openAddForm} className="btn-save" style={{ background: '#38bdf8', padding: '10px 20px', borderRadius: '8px' }}>
+                <button onClick={openAddForm} className="btn-save" style={{ background: '#38bdf8', padding: '10px 20px', borderRadius: '8px', color: '#000', fontWeight: 'bold', border: 'none', cursor: 'pointer' }}>
                     ➕ THÊM CHIẾN THUẬT
                 </button>
             </div>
@@ -284,7 +300,6 @@ const ManageStrategies = () => {
                 <div className="strategy-cards-grid">
                     {filteredStrategies.length > 0 ? (
                         filteredStrategies.map(strat => {
-                            // 🌟 KIỂM TRA QUYỀN SỞ HỮU TRƯỚC KHI HIỂN THỊ NÚT SỬA/XÓA
                             const authorId = strat.author?._id || strat.author;
                             const isOwnerOrAdmin = user?.role === 'admin' || authorId === user?.id;
 
@@ -296,7 +311,6 @@ const ManageStrategies = () => {
                                             <span className="score-badge">ĐIỂM: {strat.score || 5}</span>
                                         </div>
                                         
-                                        {/* 🌟 NẾU CÓ QUYỀN THÌ MỚI HIỂN THỊ NÚT */}
                                         {isOwnerOrAdmin && (
                                             <div className="strat-header-actions">
                                                 <button className="btn-edit-mini btn-transparent-mini" onClick={(e) => { e.stopPropagation(); handleEditClick(strat); }} title="Sửa">✏️</button>
@@ -340,10 +354,35 @@ const ManageStrategies = () => {
                         })
                     ) : (
                         <div className="empty-state-msg empty-full-span">
-                            Không tìm thấy chiến thuật nào phù hợp.
+                            Không tìm thấy chiến thuật nào ở trang này.
                         </div>
                     )}
                 </div>
+
+                {/* 🌟 BỘ NÚT ĐIỀU HƯỚNG PHÂN TRANG 🌟 */}
+                {totalPages > 1 && (
+                    <div className="pagination-controls" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '15px', marginTop: '30px' }}>
+                        <button 
+                            disabled={page === 1} 
+                            onClick={() => handlePageChange(page - 1)}
+                            style={{ padding: '8px 20px', background: page === 1 ? '#334155' : 'transparent', color: page === 1 ? '#94a3b8' : '#38bdf8', border: '1px solid #38bdf8', borderRadius: '6px', cursor: page === 1 ? 'not-allowed' : 'pointer' }}
+                        >
+                            ⬅️ TRƯỚC
+                        </button>
+                        
+                        <span style={{ padding: '8px 20px', background: '#0f172a', color: '#fff', border: '1px solid #1e293b', borderRadius: '6px', fontWeight: 'bold' }}>
+                            TRANG {page} / {totalPages}
+                        </span>
+
+                        <button 
+                            disabled={page === totalPages} 
+                            onClick={() => handlePageChange(page + 1)}
+                            style={{ padding: '8px 20px', background: page === totalPages ? '#334155' : 'transparent', color: page === totalPages ? '#94a3b8' : '#38bdf8', border: '1px solid #38bdf8', borderRadius: '6px', cursor: page === totalPages ? 'not-allowed' : 'pointer' }}
+                        >
+                            SAU ➡️
+                        </button>
+                    </div>
+                )}
             </section>
 
             <ItemModal isOpen={isItemModalOpen} onClose={() => setIsItemModalOpen(false)} items={items} selectedItems={formData.counterItems} onToggle={handleToggleItem} />

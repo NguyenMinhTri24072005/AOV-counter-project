@@ -60,7 +60,7 @@ const rootDir = process.cwd();
 processDirectory(rootDir);
 
 const finalOutput = treeStructure + fileContents;
-const outputFileName = 'combined_Project.txt';
+const outputFileName = 'combined_project.txt';
 
 fs.writeFileSync(outputFileName, finalOutput);
 console.log(`✅ Hoàn tất! Hãy gửi file "${outputFileName}" cho AI để bắt đầu làm việc.`);
