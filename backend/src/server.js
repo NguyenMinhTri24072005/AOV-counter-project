@@ -2,6 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
+const helmet = require('helmet'); // 🌟 THÊM HELMET
 const path = require('path');
 
 const authRoutes = require('./routes/authRoutes');
@@ -15,7 +16,29 @@ const userRoutes = require('./routes/userRoutes')
 
 const app = express();
 
-app.use(cors());
+// 1. KÍCH HOẠT HELMET: Bảo vệ HTTP Headers
+app.use(helmet());
+// Cấu hình Helmet để cho phép Frontend load ảnh từ thư mục /uploads của Backend
+app.use(helmet.crossOriginResourcePolicy({ policy: "cross-origin" }));
+
+// 2. CẤU HÌNH CORS (Danh sách trắng)
+const allowedOrigins = [
+    'http://localhost:5173', // Môi trường Dev (Vite)
+    'https://ten-du-an-cua-ban.vercel.app' // Thay bằng link Vercel/Netlify thực tế sau khi deploy
+];
+
+app.use(cors({
+    origin: function (origin, callback) {
+        // Cho phép các request không có origin (ví dụ: Postman) hoặc nằm trong danh sách trắng
+        if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+            callback(null, true);
+        } else {
+            callback(new Error('CORS Policy: Domain này không được phép truy cập API!'));
+        }
+    },
+    credentials: true
+}));
+
 app.use(express.json());
 
 // Cấp quyền truy cập thư mục ảnh (Thư mục uploads nằm ngoài src)
