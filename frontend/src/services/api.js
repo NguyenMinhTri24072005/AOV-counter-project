@@ -24,7 +24,7 @@ apiClient.interceptors.request.use((config) => {
 export const getHeroes = (page = 1, limit = 200) => apiClient.get(`/heroes?page=${page}&limit=${limit}`);
 export const createHero = (heroData) => apiClient.post('/heroes', heroData);
 export const getItems = () => apiClient.get('/items');
-export const getCounters = (enemyIds = [], excludedIds = [], mode = 'standard', userId = null, page = 1, limit = 20) => apiClient.post('/matchups/recommend', { enemyIds, excludedIds, mode, userId, page, limit });
+export const getCounters = (enemyIds = [], excludedIds = [], mode = 'standard', userId = null, page = 1, limit = 20, extraFilters = {}) =>  apiClient.post('/matchups/recommend', { enemyIds, excludedIds, mode, userId, page, limit, ...extraFilters });
 
 // --- ROLES & CATEGORIES ---
 export const getRoles = () => apiClient.get('/roles');
@@ -58,11 +58,9 @@ export const uploadImage = (formData) => apiClient.post('/upload', formData, {
 export const updateMatchup = (id, data) => apiClient.put(`/matchups/${id}`, data);
 export const updateStrategy = (id, data) => apiClient.put(`/strategies/${id}`, data);
 
-// Thay thế hàm getStrategies hiện tại bằng đoạn code này:
-export const getStrategies = (mode = 'standard', userId = null, page = 1, limit = 20) => {
-    return apiClient.post('/strategies/filter', { mode, userId, page, limit });
+export const getStrategies = (mode = 'standard', userId = null, page = 1, limit = 20, extraFilters = {}) => {
+    return apiClient.post('/strategies/filter', { mode, userId, page, limit, ...extraFilters }); 
 };
-
 // Tạo chiến thuật nâng cao mới
 export const createStrategy = (strategyData) => {
     return apiClient.post('/strategies', strategyData); // Sửa API thành apiClient

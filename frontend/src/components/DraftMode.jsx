@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { getCounters, getStrategies } from '../services/api'; 
+import { getCounters, getStrategies } from '../services/api';
 import { AuthContext } from '../context/AuthContext';
 import ModeToggle from './ModeToggle';
 import HeroModal from './HeroModal';
@@ -15,10 +15,10 @@ const DraftMode = ({ heroes }) => {
     const { user } = useContext(AuthContext);
     const [viewMode, setViewMode] = useState('standard');
 
-    const [bansEnemy, setBansEnemy] = useState([null, null, null, null]); 
-    const [bansAlly, setBansAlly] = useState([null, null, null, null]);   
-    const [picksEnemy, setPicksEnemy] = useState([null, null, null, null, null]); 
-    const [picksAlly, setPicksAlly] = useState([null, null, null, null, null]);   
+    const [bansEnemy, setBansEnemy] = useState([null, null, null, null]);
+    const [bansAlly, setBansAlly] = useState([null, null, null, null]);
+    const [picksEnemy, setPicksEnemy] = useState([null, null, null, null, null]);
+    const [picksAlly, setPicksAlly] = useState([null, null, null, null, null]);
 
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [targetAction, setTargetAction] = useState({ type: null, index: null });
@@ -26,7 +26,7 @@ const DraftMode = ({ heroes }) => {
     // STATE DỮ LIỆU
     const [allEnemyCounters, setAllEnemyCounters] = useState([]);
     const [allAllyCounters, setAllAllyCounters] = useState([]);
-    const [advancedStrategies, setAdvancedStrategies] = useState([]); 
+    const [advancedStrategies, setAdvancedStrategies] = useState([]);
     const [isAnalyzing, setIsAnalyzing] = useState(false);
 
     // 🌟 KHẮC PHỤC LỖI: Đảm bảo heroesList luôn là một mảng
@@ -38,7 +38,7 @@ const DraftMode = ({ heroes }) => {
     const validPicksAlly = picksAlly.filter(Boolean);
 
     const allExcluded = [...validBansEnemy, ...validBansAlly, ...validPicksEnemy, ...validPicksAlly];
-    
+
     // 🌟 Sử dụng heroesList thay cho heroes
     const availableHeroes = heroesList.filter(hero => !allExcluded.includes(hero._id));
 
@@ -60,7 +60,7 @@ const DraftMode = ({ heroes }) => {
         } else if (type === 'pickAlly') {
             const newArr = [...picksAlly]; newArr[index] = heroId; setPicksAlly(newArr);
         }
-        
+
         setIsModalOpen(false);
         setTargetAction({ type: null, index: null });
     };
@@ -83,19 +83,19 @@ const DraftMode = ({ heroes }) => {
             setIsAnalyzing(true);
             try {
                 if (validPicksEnemy.length > 0) {
-                    const resEnemy = await getCounters(validPicksEnemy, [], viewMode, user?.id);
-                    // FIX: Lấy dữ liệu từ .data.data do API đã thay đổi cấu trúc trả về
+                    // SỬA Ở ĐÂY: Thêm page = 1, limit = 1000
+                    const resEnemy = await getCounters(validPicksEnemy, [], viewMode, user?.id, 1, 1000);
                     setAllEnemyCounters(resEnemy.data?.data ? resEnemy.data.data : resEnemy.data || []);
                 } else setAllEnemyCounters([]);
 
                 if (validPicksAlly.length > 0) {
-                    const resAlly = await getCounters(validPicksAlly, [], viewMode, user?.id);
-                    // FIX tương tự
+                    // SỬA Ở ĐÂY: Thêm page = 1, limit = 1000
+                    const resAlly = await getCounters(validPicksAlly, [], viewMode, user?.id, 1, 1000);
                     setAllAllyCounters(resAlly.data?.data ? resAlly.data.data : resAlly.data || []);
                 } else setAllAllyCounters([]);
 
-                const resStrats = await getStrategies(viewMode, user?.id);
-                // FIX nguyên nhân gây lỗi forEach
+                // SỬA Ở ĐÂY: Thêm page = 1, limit = 1000
+                const resStrats = await getStrategies(viewMode, user?.id, 1, 1000);
                 setAdvancedStrategies(resStrats.data?.data ? resStrats.data.data : resStrats.data || []);
 
             } catch (error) {
@@ -105,13 +105,13 @@ const DraftMode = ({ heroes }) => {
             }
         };
         fetchAllRelations();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [picksEnemy, picksAlly, viewMode, user]);
 
     // --- LOGIC PHÂN TÍCH 1V1 ---
     const isEnemyCounteredByAlly = (enemyId) => allEnemyCounters.some(c => validPicksAlly.includes(c.hero._id) && c.matchupDetails.some(d => d.enemyId === enemyId));
     const isAllyCounteredByEnemy = (allyId) => allAllyCounters.some(c => validPicksEnemy.includes(c.hero._id) && c.matchupDetails.some(d => d.enemyId === allyId));
-    
+
     // 🌟 Sử dụng heroesList
     const getHeroName = (id) => heroesList.find(h => h._id === id)?.name || "Unknown";
     const getHeroAvatar = (id) => heroesList.find(h => h._id === id)?.avatar || "";
@@ -136,10 +136,10 @@ const DraftMode = ({ heroes }) => {
         }
     });
 
-    const allySynergies = advancedStrategies.filter(s => 
-        s.type === 'synergy' && 
-        s.teamA.some(h => validPicksAlly.includes(h._id)) && 
-        !s.teamA.every(h => validPicksAlly.includes(h._id)) 
+    const allySynergies = advancedStrategies.filter(s =>
+        s.type === 'synergy' &&
+        s.teamA.some(h => validPicksAlly.includes(h._id)) &&
+        !s.teamA.every(h => validPicksAlly.includes(h._id))
     );
 
     const enemyCombosRaw = [];
@@ -147,15 +147,15 @@ const DraftMode = ({ heroes }) => {
         if (s.type === 'synergy' && s.teamA.some(h => validPicksEnemy.includes(h._id))) {
             enemyCombosRaw.push(s);
         }
-        
+
         if (s.type === 'combo_counter' && s.teamB.some(h => validPicksEnemy.includes(h._id))) {
             enemyCombosRaw.push({
                 ...s,
                 _id: s._id + '_auto',
-                type: 'synergy',      
-                teamA: s.teamB,        
+                type: 'synergy',
+                teamA: s.teamB,
                 teamB: [],
-                note: "" 
+                note: ""
             });
         }
     });
@@ -201,7 +201,7 @@ const DraftMode = ({ heroes }) => {
         return cards.map(card => {
             const filteredDetails = card.matchupDetails.filter(d => {
                 if (sourceFilter === 'system') return d.isSystem;
-                if (sourceFilter === 'personal') return !d.isSystem; 
+                if (sourceFilter === 'personal') return !d.isSystem;
                 return true;
             });
             return { ...card, matchupDetails: filteredDetails };
@@ -211,7 +211,7 @@ const DraftMode = ({ heroes }) => {
     // UI: RENDER CARD 1V1
     const renderCards = (cardsList, isThreatBox) => {
         if (cardsList.length === 0) return <p className="no-results txt-sm">Không có dữ liệu 1v1 phù hợp.</p>;
-        
+
         return (
             <div className="recommendation-grid">
                 {cardsList.map((dataObj) => {
@@ -235,10 +235,10 @@ const DraftMode = ({ heroes }) => {
                                     <ul className="rec-details-list">
                                         {dataObj.matchupDetails.map((detail, idx) => (
                                             <li key={idx}>
-                                                Khắc chế 
+                                                Khắc chế
                                                 <img src={getAvatarUrl(getHeroAvatar(detail.enemyId))} className="mini-inline-avatar" alt="enemy" title={getHeroName(detail.enemyId)} />
                                                 <b className={colorClass}>{getHeroName(detail.enemyId)}</b> ({detail.score}đ)
-                                                
+
                                                 <div className="rec-note">
                                                     "{detail.note}"
                                                     <div className={`rec-note-author ${detail.isSystem ? 'author-system' : 'author-personal'}`}>
@@ -260,11 +260,11 @@ const DraftMode = ({ heroes }) => {
     // UI: RENDER CHIẾN THUẬT NÂNG CAO
     const renderAdvancedCards = (stratList, title, themeColor, isThreatBox = false) => {
         if (!stratList || stratList.length === 0) return null;
-        
+
         const getFilteredStrats = (list, sourceFilter) => list.filter(s => sourceFilter === 'system' ? s.isSystem : !s.isSystem);
 
         const StrategyList = ({ data }) => {
-            if(data.length === 0) return <p className="no-results txt-sm">Không có chiến thuật này.</p>;
+            if (data.length === 0) return <p className="no-results txt-sm">Không có chiến thuật này.</p>;
             return (
                 <div className="strat-advanced-grid">
                     {data.map(strat => (
@@ -275,7 +275,7 @@ const DraftMode = ({ heroes }) => {
                                 <span className={`score-badge no-margin ${isThreatBox ? 'bg-threat' : 'bg-recommend'}`}>
                                     {isThreatBox ? 'NGUY HIỂM: ' : 'ĐIỂM: '} {strat.score || 5}
                                 </span>
-                                
+
                                 <span className="adv-author">Bởi: {strat.isSystem ? 'Hệ thống' : strat.author?.username}</span>
                             </div>
                             <div className="adv-teams">
@@ -287,7 +287,7 @@ const DraftMode = ({ heroes }) => {
                                         </div>
                                     ))}
                                 </div>
-                                
+
                                 {strat.type !== 'synergy' && strat.teamB?.length > 0 && (
                                     <>
                                         <div className="adv-vs">{strat.type === 'skill_matchup' ? '50/50' : 'VS'}</div>
@@ -311,7 +311,7 @@ const DraftMode = ({ heroes }) => {
         return (
             <div className="advanced-strategy-block" style={{ borderTop: `2px solid ${themeColor}` }}>
                 <h3 className="advanced-block-title" style={{ color: themeColor }}>{title}</h3>
-                
+
                 {viewMode === 'compare' ? (
                     <div className="compare-split-layout">
                         <div className="compare-col system-col">
@@ -384,7 +384,7 @@ const DraftMode = ({ heroes }) => {
                 {/* KHU VỰC 1: ĐỀ XUẤT 1V1 VÀ COMBO PHÁ GIẢI (MÀU XANH) */}
                 <div className="analysis-board board-recommend">
                     <h2>📊 GỢI Ý CHIẾN THUẬT CHO ĐỘI TA</h2>
-                    
+
                     {/* Bảng Đề xuất 1v1 */}
                     <div className="sub-board">
                         <h3 className="sub-board-title">Khắc chế 1v1</h3>
@@ -412,7 +412,7 @@ const DraftMode = ({ heroes }) => {
                 {/* KHU VỰC 2: CẢNH BÁO NGUY HIỂM TỪ ĐỊCH (MÀU ĐỎ) */}
                 <div className="analysis-board board-threat">
                     <h2>⚠️ PHÂN TÍCH MỐI ĐE DỌA TỪ ĐỊCH</h2>
-                    
+
                     <div className="sub-board">
                         <h3 className="sub-board-title">Tướng Địch khắc chế Ta (1v1)</h3>
                         {viewMode === 'compare' ? (

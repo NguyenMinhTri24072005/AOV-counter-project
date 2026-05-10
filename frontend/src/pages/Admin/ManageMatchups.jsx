@@ -28,45 +28,78 @@ const ManageMatchups = () => {
     const [totalPages, setTotalPages] = useState(1);
     const [limit] = useState(20);
 
+    // State tìm kiếm và lọc
     const [searchTerm, setSearchTerm] = useState('');
+    const [debouncedSearch, setDebouncedSearch] = useState('');
     const [roleFilter, setRoleFilter] = useState('');
     const [laneFilter, setLaneFilter] = useState('');
 
     const [isFormOpen, setIsFormOpen] = useState(false);
     const initialForm = {
-        enemyHeroId: '',
-        heroId: '',
-        score: 5,
-        note: '',
-        counterItems: []
+        enemyHeroId: '', heroId: '', score: 5, note: '', counterItems: []
     };
     const [formData, setFormData] = useState(initialForm);
     const [editingId, setEditingId] = useState(null);
 
+    // Xử lý Debounce cho ô tìm kiếm (chờ 500ms)
     useEffect(() => {
-        if (user) {
+        const timerId = setTimeout(() => setDebouncedSearch(searchTerm), 500);
+        return () => clearTimeout(timerId);
+    }, [searchTerm]);
+
+    // Lấy dữ liệu tĩnh ban đầu
+    useEffect(() => {
+        const initMeta = async () => {
+            try {
+                const [hRes, iRes] = await Promise.all([getHeroes(), getItems()]);
+                setHeroes(hRes.data?.data ? hRes.data.data : hRes.data);
+                setItems(iRes.data?.data ? iRes.data.data : iRes.data);
+            } catch (err) { console.error(err); }
+        };
+        initMeta();
+    }, []);
+
+    // Load dữ liệu khi có thay đổi Filter hoặc chuyển trang
+    useEffect(() => {
+        if (user && heroes.length > 0) {
             loadData(1);
         }
-    }, [user]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [debouncedSearch, roleFilter, laneFilter, viewMode, user, heroes.length]);
 
     const loadData = async (currentPage = page) => {
         setIsLoading(true);
         try {
-            const [hRes, iRes, mRes] = await Promise.all([
-                getHeroes(),
-                getItems(),
-                getCounters([], [], 'all', null, currentPage, limit) // Truyền param phân trang
-            ]);
+            // Frontend hỗ trợ chuyển đổi ID Tướng cho Backend tìm
+            let matchingNameHeroIds = [];
+            if (debouncedSearch) {
+                matchingNameHeroIds = heroes.filter(h => h.name?.toLowerCase().includes(debouncedSearch.toLowerCase())).map(h => h._id);
+            }
 
-            setHeroes(hRes.data?.data ? hRes.data.data : hRes.data);
-            setItems(iRes.data?.data ? iRes.data.data : iRes.data);
-            
+            let requiredHeroIds = [];
+            const hasRoleOrLaneFilter = roleFilter !== '' || laneFilter !== '';
+            if (hasRoleOrLaneFilter) {
+                requiredHeroIds = heroes.filter(h => {
+                    const matchRole = roleFilter === '' || h.roles?.some(r => (r.name || r) === roleFilter || r._id === roleFilter);
+                    const matchLane = laneFilter === '' || h.lane?.includes(laneFilter);
+                    return matchRole && matchLane;
+                }).map(h => h._id);
+            }
+
+            const extraFilters = {
+                searchTerm: debouncedSearch,
+                matchingNameHeroIds, requiredHeroIds, hasRoleOrLaneFilter
+            };
+
+            const apiMode = viewMode === 'personal' ? 'custom' : (viewMode === 'system' ? 'standard' : 'community');
+            const mRes = await getCounters([], [], apiMode, user?.id, currentPage, limit, extraFilters);
+
             setMatchups(mRes.data?.data ? mRes.data.data : mRes.data);
             
             if (mRes.data?.pagination) {
                 setTotalPages(mRes.data.pagination.totalPages);
+                setPage(mRes.data.pagination.currentPage);
             }
-            
         } catch (error) {
             console.error("Lỗi tải dữ liệu:", error);
         } finally {
@@ -84,46 +117,30 @@ const ManageMatchups = () => {
     const handleToggleItem = (itemId) => {
         setFormData(prev => ({
             ...prev,
-            counterItems: prev.counterItems.includes(itemId)
-                ? prev.counterItems.filter(id => id !== itemId)
-                : [...prev.counterItems, itemId]
+            counterItems: prev.counterItems.includes(itemId) ? prev.counterItems.filter(id => id !== itemId) : [...prev.counterItems, itemId]
         }));
     };
 
-    const openAddForm = () => {
-        setFormData(initialForm);
-        setEditingId(null);
-        setIsFormOpen(true);
-    };
+    const openAddForm = () => { setFormData(initialForm); setEditingId(null); setIsFormOpen(true); };
 
     const handleEditClick = (detail, groupHeroId) => {
         setFormData({
-            enemyHeroId: detail.enemyId,
-            heroId: groupHeroId,
-            score: detail.score,
-            note: detail.note,
+            enemyHeroId: detail.enemyId, heroId: groupHeroId,
+            score: detail.score, note: detail.note,
             counterItems: detail.counterItems || []
         });
-        setEditingId(detail._id);
-        setIsFormOpen(true);
+        setEditingId(detail._id); setIsFormOpen(true);
     };
 
-    const closeFormModal = () => {
-        setFormData(initialForm);
-        setEditingId(null);
-        setIsFormOpen(false);
-    };
+    const closeFormModal = () => { setFormData(initialForm); setEditingId(null); setIsFormOpen(false); };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
             const payload = {
-                enemyHeroId: formData.enemyHeroId,
-                counterHeroId: formData.heroId,
-                score: formData.score,
-                note: formData.note,
-                counterItems: formData.counterItems,
-                author: user?.id || user?._id
+                enemyHeroId: formData.enemyHeroId, counterHeroId: formData.heroId,
+                score: formData.score, note: formData.note,
+                counterItems: formData.counterItems, author: user?.id || user?._id
             };
 
             if (editingId) {
@@ -134,22 +151,16 @@ const ManageMatchups = () => {
                 toast.success("Đã tạo chiến thuật mới thành công!");
             }
 
-            closeFormModal();
-            loadData(page); // Load lại trang hiện tại
-        } catch (err) {
-            toast.error(err.response?.data?.message || "Lỗi xử lý");
-        }
+            closeFormModal(); loadData(page);
+        } catch (err) { toast.error(err.response?.data?.message || "Lỗi xử lý"); }
     };
 
     const handleDelete = async (id) => {
         if (!id) return toast.warning("Lỗi: Không tìm thấy ID của kèo này!");
         if (!window.confirm("Xác nhận xóa chiến thuật này?")) return;
         try {
-            await deleteMatchup(id);
-            loadData(page);
-        } catch (err) {
-            toast.error("Lỗi khi xóa");
-        }
+            await deleteMatchup(id); loadData(page);
+        } catch (err) { toast.error("Lỗi khi xóa"); }
     };
 
     const allRoles = useMemo(() => {
@@ -164,41 +175,11 @@ const ManageMatchups = () => {
         return Array.from(lanes);
     }, [heroes]);
 
-    const filteredResults = matchups.map(group => ({
-        ...group,
-        matchupDetails: group.matchupDetails.filter(d => {
-            const authorId = d.authorId || d.author?._id || d.author;
-            if (viewMode === 'personal') return authorId === user?.id;
-            if (viewMode === 'system') return d.isSystem;
-            if (viewMode === 'community') return !d.isSystem;
-            return false;
-        })
-    })).filter(group => {
-        if (group.matchupDetails.length === 0) return false;
-
-        const fullHero = heroes.find(h => h._id === group.hero._id);
-
-        const matchName = group.hero.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            group.matchupDetails.some(d => {
-                const enemy = heroes.find(h => h._id === d.enemyId);
-                return enemy?.name?.toLowerCase().includes(searchTerm.toLowerCase());
-            });
-
-        const matchRole = roleFilter ? fullHero?.roles?.some(r => (r.name || r) === roleFilter || r._id === roleFilter) : true;
-        const matchLane = laneFilter ? fullHero?.lane?.includes(laneFilter) : true;
-
-        return matchName && matchRole && matchLane;
-    });
-
     return (
         <div className="admin-manage-container">
             <div className="flex-row-gap" style={{ justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                 <h2 className="admin-page-title m-0-b-5" style={{ marginBottom: 0 }}>⚔️ CHIẾN TRƯỜNG MÔ PHỎNG (1V1)</h2>
-                <button 
-                    onClick={openAddForm} 
-                    className="btn-save" 
-                    style={{ background: '#38bdf8', padding: '10px 20px', borderRadius: '8px', color: '#000', fontWeight: 'bold', border: 'none', cursor: 'pointer' }}
-                >
+                <button onClick={openAddForm} className="btn-save" style={{ background: '#38bdf8', padding: '10px 20px', borderRadius: '8px', color: '#000', fontWeight: 'bold', border: 'none', cursor: 'pointer' }}>
                     ➕ THÊM BÍ KÍP 1V1
                 </button>
             </div>
@@ -212,7 +193,7 @@ const ManageMatchups = () => {
             </div>
 
             <div className="filter-bar filter-bar-strat">
-                <input type="text" placeholder="🔍 Tìm tên tướng (ở trang hiện tại)..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="filter-input flex-1" />
+                <input type="text" placeholder="🔍 Tìm tên tướng hoặc ghi chú..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="filter-input flex-1" />
                 <select value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)} className="filter-select">
                     <option value="">🛡️ TẤT CẢ VAI TRÒ</option>
                     {allRoles.map(role => <option key={role} value={role}>{role}</option>)}
@@ -229,9 +210,9 @@ const ManageMatchups = () => {
                 ) : (
                     <>
                         <div className="matchup-cards-grid">
-                            {filteredResults.length > 0 ? (
-                                filteredResults.map(group => (
-                                    <div key={group.hero._id} className={`matchup-admin-card ${viewMode === 'personal' ? 'border-personal' : (viewMode === 'system' ? 'border-system' : 'border-community')}`}>
+                            {matchups.length > 0 ? (
+                                matchups.map(group => (
+                                    <div key={group.hero._id} className={`matchup-admin-card border-${viewMode}`}>
                                         <div className="card-top border-b-glass">
                                             <div className="hero-meta">
                                                 <img src={getImgUrl(group.hero.avatar)} alt="hero" className="main-hero-img" />
@@ -275,7 +256,7 @@ const ManageMatchups = () => {
                                 ))
                             ) : (
                                 <div className="empty-state-msg empty-full-span p-40">
-                                    <p>Không tìm thấy chiến thuật nào ở trang này.</p>
+                                    <p>Không tìm thấy chiến thuật nào phù hợp với bộ lọc.</p>
                                 </div>
                             )}
                         </div>
@@ -283,23 +264,13 @@ const ManageMatchups = () => {
                         {/* BỘ NÚT ĐIỀU HƯỚNG PHÂN TRANG */}
                         {totalPages > 1 && (
                             <div className="pagination-controls" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '15px', marginTop: '30px' }}>
-                                <button 
-                                    disabled={page === 1} 
-                                    onClick={() => handlePageChange(page - 1)}
-                                    style={{ padding: '8px 20px', background: page === 1 ? '#334155' : 'transparent', color: page === 1 ? '#94a3b8' : '#38bdf8', border: '1px solid #38bdf8', borderRadius: '6px', cursor: page === 1 ? 'not-allowed' : 'pointer' }}
-                                >
+                                <button disabled={page === 1} onClick={() => handlePageChange(page - 1)} style={{ padding: '8px 20px', background: page === 1 ? '#334155' : 'transparent', color: page === 1 ? '#94a3b8' : '#38bdf8', border: '1px solid #38bdf8', borderRadius: '6px', cursor: page === 1 ? 'not-allowed' : 'pointer' }}>
                                     ⬅️ TRƯỚC
                                 </button>
-                                
                                 <span style={{ padding: '8px 20px', background: '#0f172a', color: '#fff', border: '1px solid #1e293b', borderRadius: '6px', fontWeight: 'bold' }}>
                                     TRANG {page} / {totalPages}
                                 </span>
-
-                                <button 
-                                    disabled={page === totalPages} 
-                                    onClick={() => handlePageChange(page + 1)}
-                                    style={{ padding: '8px 20px', background: page === totalPages ? '#334155' : 'transparent', color: page === totalPages ? '#94a3b8' : '#38bdf8', border: '1px solid #38bdf8', borderRadius: '6px', cursor: page === totalPages ? 'not-allowed' : 'pointer' }}
-                                >
+                                <button disabled={page === totalPages} onClick={() => handlePageChange(page + 1)} style={{ padding: '8px 20px', background: page === totalPages ? '#334155' : 'transparent', color: page === totalPages ? '#94a3b8' : '#38bdf8', border: '1px solid #38bdf8', borderRadius: '6px', cursor: page === totalPages ? 'not-allowed' : 'pointer' }}>
                                     SAU ➡️
                                 </button>
                             </div>
@@ -310,17 +281,10 @@ const ManageMatchups = () => {
 
             <ItemModal isOpen={isItemModalOpen} onClose={() => setIsItemModalOpen(false)} items={items} selectedItems={formData.counterItems} onToggle={handleToggleItem} />
 
+            {/* Các popup (isFormOpen, viewingDetail) giữ nguyên như cũ, không thay đổi */}
             {isFormOpen && (
                 <div className="card-detail-overlay" onClick={closeFormModal} style={{ zIndex: 10000 }}>
-                    <div 
-                        className="cyber-panel strat-modal-panel" 
-                        onClick={e => e.stopPropagation()} 
-                        style={{ 
-                            background: '#0f172a', width: '90%', maxWidth: '800px', maxHeight: '90vh', 
-                            padding: '30px', borderRadius: '12px', overflowY: 'auto', 
-                            border: `2px solid ${editingId ? '#f59e0b' : '#38bdf8'}`, position: 'relative'
-                        }}
-                    >
+                    <div className="cyber-panel strat-modal-panel" onClick={e => e.stopPropagation()} style={{ background: '#0f172a', width: '90%', maxWidth: '800px', maxHeight: '90vh', padding: '30px', borderRadius: '12px', overflowY: 'auto', border: `2px solid ${editingId ? '#f59e0b' : '#38bdf8'}`, position: 'relative' }}>
                         <button className="close-modal-btn" onClick={closeFormModal}>×</button>
                         <h2 style={{ color: editingId ? '#f59e0b' : '#38bdf8', marginBottom: '25px', fontFamily: 'Oswald', textTransform: 'uppercase' }}>
                             {editingId ? `✏️ CẬP NHẬT BÍ KÍP 1V1` : '➕ THÊM BÍ KÍP 1V1 MỚI'}
@@ -341,13 +305,7 @@ const ManageMatchups = () => {
                                     <span className="slot-title yellow">ĐIỂM KHẮC CHẾ (1-5)</span>
                                     <div className="cyber-score-bar">
                                         {[1, 2, 3, 4, 5].map(num => (
-                                            <button
-                                                key={num} type="button"
-                                                className={`score-node ${formData.score === num ? 'active' : ''}`}
-                                                onClick={() => setFormData({ ...formData, score: num })}
-                                            >
-                                                {num}
-                                            </button>
+                                            <button key={num} type="button" className={`score-node ${formData.score === num ? 'active' : ''}`} onClick={() => setFormData({ ...formData, score: num })}>{num}</button>
                                         ))}
                                     </div>
                                 </div>
@@ -356,10 +314,7 @@ const ManageMatchups = () => {
                             <div className="form-bottom-row mt-20">
                                 <div className="textarea-wrap flex-2">
                                     <label className="slot-title">GHI CHÚ CHIẾN THUẬT:</label>
-                                    <textarea value={formData.note} required
-                                        onChange={e => setFormData({ ...formData, note: e.target.value })}
-                                        placeholder="Mô tả chi tiết cách thức khắc chế..." className="form-textarea matchup-textarea"
-                                    />
+                                    <textarea value={formData.note} required onChange={e => setFormData({ ...formData, note: e.target.value })} placeholder="Mô tả chi tiết cách thức khắc chế..." className="form-textarea matchup-textarea" />
                                 </div>
                                 <div className="items-selector-wrap flex-1">
                                     <label className="slot-title">TRANG BỊ ({formData.counterItems.length}):</label>
@@ -379,9 +334,7 @@ const ManageMatchups = () => {
                                 <button type="submit" className={`btn-cyber btn-submit-large ${editingId ? 'bg-amber' : 'bg-emerald'}`} style={{ color: '#000' }}>
                                     {editingId ? '🔄 CẬP NHẬT CHIẾN THUẬT' : 'XÁC NHẬN LƯU CHIẾN THUẬT'}
                                 </button>
-                                {editingId && (
-                                    <button type="button" className="btn-cyber btn-cancel btn-submit-large" onClick={closeFormModal}>❌ HỦY CHỈNH SỬA</button>
-                                )}
+                                {editingId && <button type="button" className="btn-cyber btn-cancel btn-submit-large" onClick={closeFormModal}>❌ HỦY CHỈNH SỬA</button>}
                             </div>
                         </form>
                     </div>

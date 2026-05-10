@@ -13,45 +13,71 @@ const createMatchup = async (req, res) => {
 
 const getRecommendations = async (req, res) => {
     try {
-        // Nhận thêm page và limit từ Frontend
-        const { enemyIds = [], excludedIds = [], mode = 'standard', userId = null, page = 1, limit = 20 } = req.body;
+        const { 
+            enemyIds = [], excludedIds = [], mode = 'standard', userId = null, 
+            page = 1, limit = 20,
+            searchTerm = '', matchingNameHeroIds = [], requiredHeroIds = [], hasRoleOrLaneFilter = false
+        } = req.body;
 
         let query = {};
         const Admin = await User.findOne({ role: 'admin' });
         const adminId = Admin?._id;
 
-        if (mode === 'standard') {
+        // Xử lý Mode hiển thị (Của tôi, Hệ thống, Cộng đồng)
+        if (mode === 'standard' && adminId) {
             query.author = adminId;
-        } else if (mode === 'custom') {
+        } else if (mode === 'custom' && userId) {
             query.author = userId;
         } else if (mode === 'compare') {
             query.author = { $in: [adminId, userId].filter(Boolean) };
+        } else if (mode === 'community' && adminId) {
+            query.author = { $ne: adminId };
         }
 
         if (enemyIds && enemyIds.length > 0) {
             query.enemyHeroId = { $in: enemyIds };
         }
 
-        // Tính toán phân trang
-        const skip = (page - 1) * limit;
-        
-        let matchupsQuery = Matchup.find(query)
-            .populate('counterHeroId', 'name avatar roles lane')
-            .populate('enemyHeroId', 'name avatar') // Lấy thêm info địch
-            .populate('counterItems', 'name icon passive')
-            .populate('author', 'username role')
-            .sort({ createdAt: -1 });
-
-        let totalItems = 0;
-
-        // Nếu là Admin tải dữ liệu Quản lý (mode = 'all') thì áp dụng phân trang Backend
-        if (mode === 'all') {
-            totalItems = await Matchup.countDocuments(query);
-            matchupsQuery = matchupsQuery.skip(skip).limit(limit);
+        // --- BỘ LỌC TÌM KIẾM BẰNG REGEX ---
+        const searchConditions = [];
+        if (searchTerm) {
+            searchConditions.push({
+                $or: [
+                    { note: { $regex: searchTerm, $options: 'i' } },
+                    { enemyHeroId: { $in: matchingNameHeroIds } },
+                    { counterHeroId: { $in: matchingNameHeroIds } }
+                ]
+            });
         }
 
-        const matchups = await matchupsQuery.exec();
+        if (hasRoleOrLaneFilter) {
+            if (requiredHeroIds.length > 0) {
+                // Chỉ tìm các kèo mà tướng Khắc Chế (Tướng của mình) khớp với Role/Lane
+                searchConditions.push({ counterHeroId: { $in: requiredHeroIds } });
+            } else {
+                searchConditions.push({ _id: null }); // Ép rỗng nếu không khớp
+            }
+        }
 
+        if (searchConditions.length > 0) {
+            query.$and = searchConditions;
+        }
+        // ------------------------------------
+
+        // Tính toán phân trang Backend
+        const skip = (page - 1) * limit;
+        const totalItems = await Matchup.countDocuments(query);
+
+        const matchups = await Matchup.find(query)
+            .populate('counterHeroId', 'name avatar roles lane')
+            .populate('enemyHeroId', 'name avatar') 
+            .populate('counterItems', 'name icon passive')
+            .populate('author', 'username role')
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limit);
+
+        // Gom nhóm (Group) các kèo khắc chế cho Frontend dễ hiển thị
         const counterMap = {};
         matchups.forEach(match => {
             if (!match.counterHeroId) return; 
@@ -88,16 +114,16 @@ const getRecommendations = async (req, res) => {
             .map(c => ({ ...c, recommendedItems: Array.from(c.recommendedItems) }))
             .sort((a, b) => b.totalScore - a.totalScore);
 
-        // Trả về kèm theo Meta Data Phân Trang
+        // Trả về kèm Meta Phân Trang
         res.status(200).json({
             success: true,
             data: sortedCounters,
-            pagination: mode === 'all' ? {
+            pagination: {
                 totalItems,
                 currentPage: parseInt(page),
                 totalPages: Math.ceil(totalItems / limit),
                 limit: parseInt(limit)
-            } : null
+            }
         });
     } catch (error) {
         res.status(500).json({ message: 'Lỗi xử lý: ' + error.message });

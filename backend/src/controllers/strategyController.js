@@ -13,8 +13,12 @@ const createStrategy = async (req, res) => {
 
 const getStrategies = async (req, res) => {
     try {
-        // Bổ sung page và limit từ req.body
-        const { mode = 'standard', userId = null, currentUserId = null, page = 1, limit = 20 } = req.body;
+        const { 
+            mode = 'standard', userId = null, currentUserId = null, 
+            page = 1, limit = 20, 
+            searchTerm = '', matchingNameHeroIds = [], 
+            requiredHeroIds = [], hasRoleOrLaneFilter = false 
+        } = req.body;
         
         const visibilityConditions = [
             { visibility: 'public' },
@@ -48,7 +52,38 @@ const getStrategies = async (req, res) => {
             query.$and.push(authorQuery);
         }
 
-        // Tính toán phân trang
+        // --- BỘ LỌC TÌM KIẾM BẰNG REGEX & TỐI ƯU ID TƯỚNG ---
+        const searchConditions = [];
+
+        if (searchTerm) {
+            searchConditions.push({
+                $or: [
+                    { note: { $regex: searchTerm, $options: 'i' } },
+                    { teamA: { $in: matchingNameHeroIds } },
+                    { teamB: { $in: matchingNameHeroIds } }
+                ]
+            });
+        }
+
+        if (hasRoleOrLaneFilter) {
+            if (requiredHeroIds.length > 0) {
+                searchConditions.push({
+                    $or: [
+                        { teamA: { $in: requiredHeroIds } },
+                        { teamB: { $in: requiredHeroIds } }
+                    ]
+                });
+            } else {
+                // Nếu Frontend lọc Role/Lane nhưng không có tướng nào khớp, chặn kết quả
+                searchConditions.push({ _id: null }); 
+            }
+        }
+
+        if (searchConditions.length > 0) {
+            query.$and.push(...searchConditions);
+        }
+        // ----------------------------------------------------
+
         const skip = (page - 1) * limit;
         const totalItems = await Strategy.countDocuments(query);
 
@@ -67,7 +102,6 @@ const getStrategies = async (req, res) => {
             return stratObj;
         });
 
-        // Trả về dữ liệu kèm theo Meta Data Phân Trang
         res.status(200).json({
             success: true,
             data: formattedStrategies,

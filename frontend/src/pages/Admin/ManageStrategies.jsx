@@ -21,52 +21,83 @@ const ManageStrategies = () => {
     const [isItemModalOpen, setIsItemModalOpen] = useState(false);
     const [viewingStrat, setViewingStrat] = useState(null);
 
-    // State phân trang
     const [page, setPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
     const [limit] = useState(20);
 
     const [isFormOpen, setIsFormOpen] = useState(false);
     const initialForm = {
-        type: 'combo_counter',
-        teamA: [null, null],
-        teamB: [null, null],
-        score: 5,
-        note: '',
-        counterItems: []
+        type: 'combo_counter', teamA: [null, null], teamB: [null, null],
+        score: 5, note: '', counterItems: []
     };
     const [formData, setFormData] = useState(initialForm);
     const [editingId, setEditingId] = useState(null);
 
+    // Filter States
     const [searchTerm, setSearchTerm] = useState('');
+    const [debouncedSearch, setDebouncedSearch] = useState('');
     const [roleFilter, setRoleFilter] = useState('');
     const [laneFilter, setLaneFilter] = useState('');
 
+    // Kỹ thuật Debounce: Chờ 500ms sau khi ngừng gõ mới cập nhật từ khóa tìm kiếm
     useEffect(() => {
-        if (user) loadData(1);
+        const timerId = setTimeout(() => setDebouncedSearch(searchTerm), 500);
+        return () => clearTimeout(timerId);
+    }, [searchTerm]);
+
+    // Tải dữ liệu Tướng và Trang bị (Chỉ 1 lần đầu)
+    useEffect(() => {
+        const initMeta = async () => {
+            try {
+                const [hRes, iRes] = await Promise.all([getHeroes(), getItems()]);
+                setHeroes(hRes.data?.data ? hRes.data.data : hRes.data);
+                setItems(iRes.data?.data ? iRes.data.data : iRes.data);
+            } catch (err) { console.error(err); }
+        };
+        initMeta();
+    }, []);
+
+    // Tải danh sách Chiến thuật mỗi khi có thay đổi Filter hoặc Page
+    useEffect(() => {
+        if (user && heroes.length > 0) {
+            loadData(1); // Reset về trang 1 nếu đổi bộ lọc
+        }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [user]);
+    }, [debouncedSearch, roleFilter, laneFilter, viewMode, user, heroes.length]);
 
     const loadData = async (currentPage = page) => {
         try {
-            const [hRes, iRes, sRes] = await Promise.all([
-                getHeroes(),
-                getItems(),
-                getStrategies('pro', user?.id, currentPage, limit) // Gọi API với phân trang
-            ]);
-            
-            setHeroes(hRes.data?.data ? hRes.data.data : hRes.data);
-            setItems(iRes.data?.data ? iRes.data.data : iRes.data);
+            // Frontend phân giải ID Tướng để giảm tải cho MongoDB
+            let matchingNameHeroIds = [];
+            if (debouncedSearch) {
+                matchingNameHeroIds = heroes.filter(h => h.name?.toLowerCase().includes(debouncedSearch.toLowerCase())).map(h => h._id);
+            }
+
+            let requiredHeroIds = [];
+            const hasRoleOrLaneFilter = roleFilter !== '' || laneFilter !== '';
+            if (hasRoleOrLaneFilter) {
+                requiredHeroIds = heroes.filter(h => {
+                    const matchRole = roleFilter === '' || h.roles?.some(r => (r.name || r) === roleFilter || r._id === roleFilter);
+                    const matchLane = laneFilter === '' || h.lane?.includes(laneFilter);
+                    return matchRole && matchLane;
+                }).map(h => h._id);
+            }
+
+            const extraFilters = {
+                searchTerm: debouncedSearch,
+                matchingNameHeroIds, requiredHeroIds, hasRoleOrLaneFilter
+            };
+
+            const apiMode = viewMode === 'personal' ? 'custom' : (viewMode === 'system' ? 'standard' : 'community');
+            const sRes = await getStrategies(apiMode, user?.id, currentPage, limit, extraFilters);
             
             setStrategies(sRes.data?.data ? sRes.data.data : sRes.data);
 
             if (sRes.data?.pagination) {
                 setTotalPages(sRes.data.pagination.totalPages);
+                setPage(sRes.data.pagination.currentPage);
             }
-            
-        } catch (err) {
-            console.error("Lỗi khi tải dữ liệu: ", err);
-        }
+        } catch (err) { console.error("Lỗi khi tải dữ liệu: ", err); }
     };
 
     const handlePageChange = (newPage) => {
@@ -88,80 +119,35 @@ const ManageStrategies = () => {
         return Array.from(lanes);
     }, [heroes]);
 
-    const filteredStrategies = strategies.filter(strat => {
-        if (viewMode === 'personal' && strat.author?._id !== user?.id && strat.author !== user?.id) return false;
-        if (viewMode === 'system' && !strat.isSystem) return false;
-        if (viewMode === 'community' && strat.isSystem) return false;
-
-        const allHeroIds = [
-            ...(strat.teamA || []).map(h => h._id || h),
-            ...(strat.teamB || []).map(h => h._id || h)
-        ];
-
-        const fullHeroesInStrat = allHeroIds
-            .map(id => heroes.find(hero => hero._id === id))
-            .filter(Boolean);
-
-        const matchName = searchTerm === '' ||
-            strat.note.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            fullHeroesInStrat.some(h => h.name?.toLowerCase().includes(searchTerm.toLowerCase()));
-
-        const matchRole = roleFilter === '' ||
-            fullHeroesInStrat.some(h => h.roles?.some(r => (r.name || r) === roleFilter || r._id === roleFilter));
-
-        const matchLane = laneFilter === '' ||
-            fullHeroesInStrat.some(h => h.lane?.includes(laneFilter));
-
-        return matchName && matchRole && matchLane;
-    });
-
     const handleTypeChange = (newType) => {
-        if (newType === 'skill_matchup') {
-            setFormData({ ...formData, type: newType, teamA: [null], teamB: [null] });
-        } else if (newType === 'synergy') {
-            setFormData({ ...formData, type: newType, teamA: [null, null], teamB: [] });
-        } else if (newType === 'combo_counter') {
-            setFormData({ ...formData, type: newType, teamA: [null, null], teamB: [null, null] });
-        }
+        if (newType === 'skill_matchup') setFormData({ ...formData, type: newType, teamA: [null], teamB: [null] });
+        else if (newType === 'synergy') setFormData({ ...formData, type: newType, teamA: [null, null], teamB: [] });
+        else if (newType === 'combo_counter') setFormData({ ...formData, type: newType, teamA: [null, null], teamB: [null, null] });
     };
 
     const handleToggleItem = (itemId) => {
         setFormData(prev => ({
-            ...prev,
-            counterItems: prev.counterItems.includes(itemId)
-                ? prev.counterItems.filter(id => id !== itemId)
-                : [...prev.counterItems, itemId]
+            ...prev, counterItems: prev.counterItems.includes(itemId) ? prev.counterItems.filter(id => id !== itemId) : [...prev.counterItems, itemId]
         }));
     };
 
-    const openAddForm = () => {
-        setFormData(initialForm);
-        setEditingId(null);
-        setIsFormOpen(true);
-    };
+    const openAddForm = () => { setFormData(initialForm); setEditingId(null); setIsFormOpen(true); };
 
     const handleEditClick = (strat) => {
         setFormData({
             type: strat.type,
             teamA: strat.teamA.map(h => h._id || h),
             teamB: strat.teamB ? strat.teamB.map(h => h._id || h) : [],
-            score: strat.score || 5,
-            note: strat.note,
+            score: strat.score || 5, note: strat.note,
             counterItems: strat.counterItems ? strat.counterItems.map(i => i._id || i) : []
         });
-        setEditingId(strat._id);
-        setIsFormOpen(true);
+        setEditingId(strat._id); setIsFormOpen(true);
     };
 
-    const closeFormModal = () => {
-        setFormData(initialForm);
-        setEditingId(null);
-        setIsFormOpen(false);
-    };
+    const closeFormModal = () => { setFormData(initialForm); setEditingId(null); setIsFormOpen(false); };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-
         const validTeamA = formData.teamA.filter(id => id !== null);
         const validTeamB = formData.teamB.filter(id => id !== null);
 
@@ -171,39 +157,29 @@ const ManageStrategies = () => {
 
         try {
             const payload = {
-                type: formData.type,
-                teamA: validTeamA,
+                type: formData.type, teamA: validTeamA,
                 teamB: formData.type === 'synergy' ? [] : validTeamB,
-                score: formData.score,
-                note: formData.note,
-                counterItems: formData.counterItems,
-                author: user?.id
+                score: formData.score, note: formData.note,
+                counterItems: formData.counterItems, author: user?.id
             };
 
             if (editingId) {
                 await updateStrategy(editingId, payload);
-                toast.success("✅ Đã cập nhật chiến thuật vào hệ thống!");
+                toast.success("✅ Đã cập nhật chiến thuật!");
             } else {
                 await createStrategy(payload);
-                toast.success("✅ Đã ghi danh chiến thuật vào hệ thống!");
+                toast.success("✅ Đã ghi danh chiến thuật!");
             }
-
-            closeFormModal();
-            loadData(page); // Load lại dữ liệu trang hiện tại
-        } catch (err) {
-            toast.error(err.response?.data?.message || "Lỗi lưu chiến thuật");
-        }
+            closeFormModal(); loadData(page);
+        } catch (err) { toast.error(err.response?.data?.message || "Lỗi lưu chiến thuật"); }
     };
 
     const handleDelete = async (id) => {
         if (!window.confirm("Xác nhận hủy bỏ chiến thuật này?")) return;
         try {
             await deleteStrategy(id);
-            toast.success("Đã xóa chiến thuật!");
-            loadData(page);
-        } catch (err) {
-            toast.error("Lỗi khi xóa");
-        }
+            toast.success("Đã xóa chiến thuật!"); loadData(page);
+        } catch (err) { toast.error("Lỗi khi xóa"); }
     };
 
     const renderTeamSlots = (teamKey, isEnemy) => {
@@ -211,50 +187,30 @@ const ManageStrategies = () => {
             <div className="combo-slots-wrapper">
                 {formData[teamKey].map((heroId, idx) => {
                     const isBaseSlot = idx < (formData.type === 'skill_matchup' ? 1 : 2);
-                    
                     return (
                         <div key={idx} className="combo-slot-item">
-                            <HeroSelect
-                                heroes={heroes}
-                                selectedHeroId={heroId}
-                                isEnemy={isEnemy}
+                            <HeroSelect heroes={heroes} selectedHeroId={heroId} isEnemy={isEnemy}
                                 onChange={(id) => {
-                                    const newTeam = [...formData[teamKey]];
-                                    newTeam[idx] = id;
-                                    setFormData({ ...formData, [teamKey]: newTeam });
+                                    const newTeam = [...formData[teamKey]]; newTeam[idx] = id; setFormData({ ...formData, [teamKey]: newTeam });
                                 }}
                             />
-                            
                             {(!isBaseSlot || heroId) && (
-                                <button 
-                                    type="button" 
-                                    className="btn-remove-slot" 
+                                <button type="button" className="btn-remove-slot" 
                                     onClick={() => {
                                         if (!isBaseSlot) {
-                                            const newTeam = formData[teamKey].filter((_, i) => i !== idx);
-                                            setFormData({ ...formData, [teamKey]: newTeam });
+                                            const newTeam = formData[teamKey].filter((_, i) => i !== idx); setFormData({ ...formData, [teamKey]: newTeam });
                                         } else {
-                                            const newTeam = [...formData[teamKey]];
-                                            newTeam[idx] = null;
-                                            setFormData({ ...formData, [teamKey]: newTeam });
+                                            const newTeam = [...formData[teamKey]]; newTeam[idx] = null; setFormData({ ...formData, [teamKey]: newTeam });
                                         }
                                     }}
-                                    title={!isBaseSlot ? "Xóa ô này" : "Bỏ chọn tướng"}
-                                >
-                                    ×
-                                </button>
+                                >×</button>
                             )}
-
-                            {idx < formData[teamKey].length - 1 && formData.type !== 'skill_matchup' && (
-                                <div className="combo-plus-icon">+</div>
-                            )}
+                            {idx < formData[teamKey].length - 1 && formData.type !== 'skill_matchup' && (<div className="combo-plus-icon">+</div>)}
                         </div>
                     );
                 })}
                 {formData[teamKey].length < 5 && formData.type !== 'skill_matchup' && (
-                    <button type="button" className="btn-add-combo-slot" onClick={() => {
-                        setFormData({ ...formData, [teamKey]: [...formData[teamKey], null] });
-                    }} title="Thêm tướng vào combo">
+                    <button type="button" className="btn-add-combo-slot" onClick={() => setFormData({ ...formData, [teamKey]: [...formData[teamKey], null] })}>
                         <span>+</span><br />THÊM
                     </button>
                 )}
@@ -273,9 +229,7 @@ const ManageStrategies = () => {
         <div className="admin-manage-container fade-in-anim">
             <div className="flex-row-gap" style={{ justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                 <h2 className="admin-page-title m-0-b-5" style={{ marginBottom: 0 }}>🚀 LÒ RÈN CHIẾN THUẬT NÂNG CAO</h2>
-                <button onClick={openAddForm} className="btn-save" style={{ background: '#38bdf8', padding: '10px 20px', borderRadius: '8px', color: '#000', fontWeight: 'bold', border: 'none', cursor: 'pointer' }}>
-                    ➕ THÊM CHIẾN THUẬT
-                </button>
+                <button onClick={openAddForm} className="btn-save" style={{ background: '#38bdf8', padding: '10px 20px', borderRadius: '8px', color: '#000', fontWeight: 'bold', border: 'none', cursor: 'pointer' }}>➕ THÊM CHIẾN THUẬT</button>
             </div>
 
             <div className="source-toggle-bar" style={{ marginTop: 0 }}>
@@ -285,7 +239,7 @@ const ManageStrategies = () => {
             </div>
 
             <div className="filter-bar filter-bar-strat">
-                <input type="text" placeholder="🔍 Tìm tên tướng hoặc ghi chú..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="filter-input search-input-large" />
+                <input type="text" placeholder="🔍 Tên tướng hoặc ghi chú..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="filter-input search-input-large" />
                 <select value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)} className="filter-select select-input-med">
                     <option value="">🛡️ TẤT CẢ VAI TRÒ</option>
                     {allRoles.map(role => <option key={role} value={role}>{role}</option>)}
@@ -298,8 +252,8 @@ const ManageStrategies = () => {
 
             <section className="admin-list-section">
                 <div className="strategy-cards-grid">
-                    {filteredStrategies.length > 0 ? (
-                        filteredStrategies.map(strat => {
+                    {strategies.length > 0 ? (
+                        strategies.map(strat => {
                             const authorId = strat.author?._id || strat.author;
                             const isOwnerOrAdmin = user?.role === 'admin' || authorId === user?.id;
 
@@ -310,7 +264,6 @@ const ManageStrategies = () => {
                                             <span className="strat-type-badge">{getStrategyTitle(strat.type)}</span>
                                             <span className="score-badge">ĐIỂM: {strat.score || 5}</span>
                                         </div>
-                                        
                                         {isOwnerOrAdmin && (
                                             <div className="strat-header-actions">
                                                 <button className="btn-edit-mini btn-transparent-mini" onClick={(e) => { e.stopPropagation(); handleEditClick(strat); }} title="Sửa">✏️</button>
@@ -328,7 +281,6 @@ const ManageStrategies = () => {
                                                 </div>
                                             ))}
                                         </div>
-
                                         {strat.type !== 'synergy' && (
                                             <>
                                                 <div className="strat-vs-icon">{strat.type === 'skill_matchup' ? '50/50' : 'VS'}</div>
@@ -343,9 +295,7 @@ const ManageStrategies = () => {
                                             </>
                                         )}
                                     </div>
-
                                     <div className="strat-note">"{strat.note}"</div>
-
                                     <div className="strat-footer">
                                         <span className="strat-author">Nguồn: {strat.isSystem ? 'Hệ thống' : strat.author?.username}</span>
                                     </div>
@@ -353,32 +303,19 @@ const ManageStrategies = () => {
                             );
                         })
                     ) : (
-                        <div className="empty-state-msg empty-full-span">
-                            Không tìm thấy chiến thuật nào ở trang này.
-                        </div>
+                        <div className="empty-state-msg empty-full-span">Không tìm thấy chiến thuật nào phù hợp với bộ lọc.</div>
                     )}
                 </div>
 
-                {/* 🌟 BỘ NÚT ĐIỀU HƯỚNG PHÂN TRANG 🌟 */}
                 {totalPages > 1 && (
                     <div className="pagination-controls" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '15px', marginTop: '30px' }}>
-                        <button 
-                            disabled={page === 1} 
-                            onClick={() => handlePageChange(page - 1)}
-                            style={{ padding: '8px 20px', background: page === 1 ? '#334155' : 'transparent', color: page === 1 ? '#94a3b8' : '#38bdf8', border: '1px solid #38bdf8', borderRadius: '6px', cursor: page === 1 ? 'not-allowed' : 'pointer' }}
-                        >
+                        <button disabled={page === 1} onClick={() => handlePageChange(page - 1)} style={{ padding: '8px 20px', background: page === 1 ? '#334155' : 'transparent', color: page === 1 ? '#94a3b8' : '#38bdf8', border: '1px solid #38bdf8', borderRadius: '6px', cursor: page === 1 ? 'not-allowed' : 'pointer' }}>
                             ⬅️ TRƯỚC
                         </button>
-                        
                         <span style={{ padding: '8px 20px', background: '#0f172a', color: '#fff', border: '1px solid #1e293b', borderRadius: '6px', fontWeight: 'bold' }}>
                             TRANG {page} / {totalPages}
                         </span>
-
-                        <button 
-                            disabled={page === totalPages} 
-                            onClick={() => handlePageChange(page + 1)}
-                            style={{ padding: '8px 20px', background: page === totalPages ? '#334155' : 'transparent', color: page === totalPages ? '#94a3b8' : '#38bdf8', border: '1px solid #38bdf8', borderRadius: '6px', cursor: page === totalPages ? 'not-allowed' : 'pointer' }}
-                        >
+                        <button disabled={page === totalPages} onClick={() => handlePageChange(page + 1)} style={{ padding: '8px 20px', background: page === totalPages ? '#334155' : 'transparent', color: page === totalPages ? '#94a3b8' : '#38bdf8', border: '1px solid #38bdf8', borderRadius: '6px', cursor: page === totalPages ? 'not-allowed' : 'pointer' }}>
                             SAU ➡️
                         </button>
                     </div>
@@ -387,7 +324,7 @@ const ManageStrategies = () => {
 
             <ItemModal isOpen={isItemModalOpen} onClose={() => setIsItemModalOpen(false)} items={items} selectedItems={formData.counterItems} onToggle={handleToggleItem} />
             
-            {/* 🌟 MODAL FORM THÊM / SỬA CHIẾN THUẬT (POPUP) 🌟 */}
+            {/* CÁC MODAL THÊM/SỬA/XEM CHI TIẾT ĐƯỢC GIỮ NGUYÊN (Tương tự phiên bản trước) */}
             {isFormOpen && (
                 <div className="card-detail-overlay" onClick={closeFormModal} style={{ zIndex: 10000 }}>
                     <div className="cyber-panel strat-modal-panel" onClick={e => e.stopPropagation()} style={{ background: '#0f172a', width: '90%', maxWidth: '850px', maxHeight: '90vh', padding: '30px', borderRadius: '12px', overflowY: 'auto', border: `2px solid ${editingId ? '#f59e0b' : '#38bdf8'}`, position: 'relative' }}>
@@ -460,7 +397,6 @@ const ManageStrategies = () => {
                 </div>
             )}
 
-            {/* 🌟 MODAL CHI TIẾT CHIẾN THUẬT (KHI BẤM VÀO CARD ĐỂ XEM) 🌟 */}
             {viewingStrat && (
                 <div className="hero-detail-overlay" onClick={() => setViewingStrat(null)}>
                     <div className="hero-detail-modal cyber-panel strat-modal-panel" onClick={e => e.stopPropagation()}>
@@ -483,9 +419,7 @@ const ManageStrategies = () => {
                                     {viewingStrat.teamA.map((h, i) => (
                                         <div key={i} className="strat-hero-icon-wrap">
                                             <img src={getImgUrl(h?.avatar)} alt={h?.name} className="modal-hero-img" />
-                                            <span className="strat-hero-name modal-hero-name">
-                                                {h?.name}
-                                            </span>
+                                            <span className="strat-hero-name modal-hero-name">{h?.name}</span>
                                         </div>
                                     ))}
                                 </div>
@@ -497,9 +431,7 @@ const ManageStrategies = () => {
                                             {viewingStrat.teamB.map((h, i) => (
                                                 <div key={i} className="strat-hero-icon-wrap">
                                                     <img src={getImgUrl(h?.avatar)} alt={h?.name} className="modal-hero-img" />
-                                                    <span className="strat-hero-name modal-hero-name">
-                                                        {h?.name}
-                                                    </span>
+                                                    <span className="strat-hero-name modal-hero-name">{h?.name}</span>
                                                 </div>
                                             ))}
                                         </div>
@@ -508,9 +440,7 @@ const ManageStrategies = () => {
                             </div>
 
                             <h3 className="section-title border-l-amber">📖 PHÂN TÍCH CHI TIẾT</h3>
-                            <div className="strat-modal-note-box">
-                                {viewingStrat.note}
-                            </div>
+                            <div className="strat-modal-note-box">{viewingStrat.note}</div>
 
                             <h3 className="section-title border-l-emerald">🛡️ TRANG BỊ KHUYÊN DÙNG</h3>
                             <div className="strat-modal-items-grid">
