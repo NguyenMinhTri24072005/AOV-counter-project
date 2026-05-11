@@ -6,7 +6,7 @@ const helmet = require('helmet'); // 🌟 THÊM HELMET
 const path = require('path');
 
 const authRoutes = require('./routes/authRoutes');
-const heroRoutes = require('./routes/herroRoutes');
+const heroRoutes = require('./routes/heroRoutes');
 const itemRoutes = require('./routes/itemRoutes');
 const matchupRoutes = require('./routes/matchupRoutes');
 const roleRoutes = require('./routes/roleRoutes');
