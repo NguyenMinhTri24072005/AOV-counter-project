@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 
 const IGNORE_DIRS = ['.git', 'node_modules', 'dist', 'build', '.vscode', 'public', 'uploads'];
-const IGNORE_FILES = ['package-lock.json', 'yarn.lock', '.DS_Store', 'combine_for_ai.js'];
+const IGNORE_FILES = ['package-lock.json', 'yarn.lock', '.DS_Store', 'combine_for_ai.js', '.env', 'target.txt', 'combine.js', 'combined_project.txt'];
 const ALLOWED_EXTENSIONS = ['.js', '.vue', '.json', '.html', '.css', '.env'];
 
 let treeStructure = "========================================\n";
